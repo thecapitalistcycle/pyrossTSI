@@ -1,1 +1,1 @@
-# PyRossTSI: Time since infection models in Python
+# PyRossTSI: Time since infection models in Python ![License](https://img.shields.io/github/license/rajeshrinet/pyrosstsi) ![stars](https://img.shields.io/github/stars/rajeshrinet/pyrosstsi) [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/rajeshrinet/pyrosstsi/master?filepath=examples)  
