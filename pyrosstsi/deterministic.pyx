@@ -92,7 +92,7 @@ cdef class Simulator:
         Tf = self.params['Tf']                   
         Tc = self.params['Tc']                   
        
-        tsi       = self.params['tsi']/Tc -1
+        tsi       = self.params['tsi']
         beta      = self.params['beta']                  
         tsi_sc    = self.params['tsi_sc']                  
         
@@ -171,7 +171,8 @@ cdef class Simulator:
             #remember this timestep
             S_t[:,i]     = S
             I_t[:,i]     = np.matmul(w,I)
-            Ic_t[:,:, i] = Ic
+            Ic_t[:,:, i] = Ic 
+
     
         if not hybrid:
             return t, S_t, I_t, Ic_t
@@ -199,7 +200,7 @@ cdef class Simulator:
         Tf = self.params['Tf']                   
         Tc = self.params['Tc']                   
        
-        tsi       = self.params['tsi']/Tc -1
+        tsi       = self.params['tsi']
         beta      = self.params['beta']                  
         tsi_sc    = self.params['tsi_sc']                  
         
