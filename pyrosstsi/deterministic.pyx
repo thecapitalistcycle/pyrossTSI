@@ -520,12 +520,12 @@ cdef class Simulator:
         beta      = self.params['beta']                  
         beta      = self.params['beta']                  
         tsi_sc    = self.params['tsi_sc']                  
-        p_alpha   = self.params['p_alpha']                  
         tswap     = self.params['tswap']                  
         
         method    = self.method
         G_method  = self.integrator
         phi_alpha = self.phi_alpha
+        p_alpha   = self.p_alpha                  
         
         
         if method == 'Predictor_Corrector':
@@ -571,5 +571,5 @@ cdef class Simulator:
                 tc = tc + tstep
                 #print(IC_t)
 
-        data = {'S_t':S_t, 'I_t':I_t, 'Ic_t':Ic_t}
+        data = {'t':t, 'S_t':S_t, 'I_t':I_t, 'Ic_t':Ic_t}
         return data    
