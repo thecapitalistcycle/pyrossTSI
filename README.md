@@ -4,11 +4,9 @@
 ## About
 
 
-[PyRoss](https://github.com/rajeshrinet/pyross) is a companion library that offers tools for both deterministic and stochastic simulation of macroscopic compartmental models, as well as a complete
+* [PyRoss](https://github.com/rajeshrinet/pyross) is a companion library that offers tools for both deterministic and stochastic simulation of macroscopic compartmental models, as well as a complete
 suite of inference and optimal control tools.
-
-
-[PyRossGeo](https://github.com/lukastk/PyRossGeo) is a companion library that supports **spatially resolved compartment models** with explicit **commuting networks**.
+* [PyRossGeo](https://github.com/lukastk/PyRossGeo) is another companion library that supports spatially resolved compartment models with explicit commuting networks.
 
 
 ## Installation
