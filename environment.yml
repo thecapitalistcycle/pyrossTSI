@@ -1,4 +1,4 @@
-name: pyross
+name: pyrosstsi
 channels:
   - conda-forge
 dependencies:
