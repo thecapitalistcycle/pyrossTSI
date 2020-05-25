@@ -71,7 +71,7 @@ cdef class Simulator:
             phiD = phiD/np.trapz(phiD,   tsi_sc)
         
             #group them all together for later processing
-            self.phi_alpha = np.array([phiR, phiH, phiD])
+            self.phi_alpha = np.array([phiR, phiH, phiD])*parameters['Tc']
             self.p_alpha = np.array([pR, pH, pD])
         else:
             raise Exception('number of E stages should be greater than zero, kE>0')
@@ -79,7 +79,7 @@ cdef class Simulator:
 
 
     
-    def solve_Predictor_Corrector(self, parameters, contactMatrix, hybrid=False, tstart=0):
+    def solve_Predictor_Corrector(self, contactMatrix, hybrid=False, tstart=0):
         ''' Predictor/Corrector is a finite difference method described in the TSI report, section 2.5
              It has good properties for speed and accuracy and should be preferred in most applications
              Notable disadvantage is a lack of flexibility in time-stepping -- you must increment by
@@ -90,8 +90,9 @@ cdef class Simulator:
         Nc = self.params['Nc']                   
         Nk = self.params['Nk']                   
         Tf = self.params['Tf']                   
+        Tc = self.params['Tc']                   
        
-        tsi       = self.params['tsi']
+        tsi       = self.params['tsi']/Tc -1
         beta      = self.params['beta']                  
         tsi_sc    = self.params['tsi_sc']                  
         
@@ -176,7 +177,9 @@ cdef class Simulator:
             return t, S_t, I_t, Ic_t
         else:
             return t, S_t, I_t, Ic_t, [S, I, Ic]
-    
+
+
+
     
     def solve_Galerkin(self, contactMatrix, hybrid=False, tstart=0):
         '''The Galerkin method is defined in the TSI report, section 2.6
@@ -194,8 +197,9 @@ cdef class Simulator:
         Nk = self.params['Nk']                   
         NL = self.params['NL']                   
         Tf = self.params['Tf']                   
+        Tc = self.params['Tc']                   
        
-        tsi       = self.params['tsi']
+        tsi       = self.params['tsi']/Tc -1
         beta      = self.params['beta']                  
         tsi_sc    = self.params['tsi_sc']                  
         
@@ -516,11 +520,12 @@ cdef class Simulator:
         beta      = self.params['beta']                  
         beta      = self.params['beta']                  
         tsi_sc    = self.params['tsi_sc']                  
-        phi_alpha = self.params['phi_alpha']                  
         p_alpha   = self.params['p_alpha']                  
         tswap     = self.params['tswap']                  
+        
         method    = self.method
         G_method  = self.integrator
+        phi_alpha = self.phi_alpha
         
         
         if method == 'Predictor_Corrector':
