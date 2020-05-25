@@ -5,7 +5,7 @@
 *.swp
 *.mat
 *.swo
-pyross/*.html
+pyrosstsi/*.html
 *.c
 *egg-info*
 dist

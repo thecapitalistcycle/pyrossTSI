@@ -1,4 +1,4 @@
-#import pyross.contactMatrix
+import pyross.contactMatrix
 #import pyross.control
 import pyross.deterministic
 #import pyross.forecast
