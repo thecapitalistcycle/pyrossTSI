@@ -16,6 +16,7 @@ DTYPE   = np.float
 
 cdef class Simulator:
     """
+    Simulator for a deterministic time-since infection model
 
     Methods
     -------
@@ -564,4 +565,6 @@ cdef class Simulator:
                 #prepare for next loop
                 tc = tc + tstep
                 #print(IC_t)
-        
+
+        data = {'S_t':S_t, 'I_t':I_t, 'Ic_t':Ic_t}
+        return data    
