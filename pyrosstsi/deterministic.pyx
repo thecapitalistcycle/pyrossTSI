@@ -14,9 +14,8 @@ DTYPE   = np.float
 
 
 
-cdef class Integrators:
+cdef class Simulator:
     """
-    List of all integrator used by various deterministic models listed below.
 
     Methods
     -------
@@ -24,29 +23,84 @@ cdef class Integrators:
 
     solve_Galerkin: 
     """
+    cdef:
+        dict params
+        str method
+        str integrator 
+        list IC 
+        np.ndarray phi_alpha, p_alpha
+
+    def __init__(self, parameters, IC, subclasses, method='Galerkin', integrator='odeint'):
+        self.params     = parameters
+        self.method     = method
+        self.integrator = integrator 
+        self.IC         = IC
+
+
+        #Define sub-classes of infecteds - optional
+        #subclasses = ['Recovered', 'Hospitalized', 'Deceased'] #e.g. Recovered, Hospitalized, Deceased
+        Nc = len(subclasses)
+        
+        #Describe the dynamics of how people move in and out of subclasses.  See section 2.2 of report
+        if Nc > 0:
+            M = parameters['M']
+            #define the probability of eventually having membership in one
+            pR = 0.99*np.ones(M);  #probability of eventually recovering for each age class
+            pH = 0.05*np.ones(M);  #probability of needing hospitalization for each age class
+            pD = 1-pR;             #probability of death for each age class
+        
+            #prepare for a linear interpolating function evaluated at times:
+            tsi_sc = parameters['tsi_sc']
+            #tsi_sc  =  np.array([0,   3.,    6.,    9.,   12,    T])  #For convenience, we say that you reach your final state at time T
+                                                                      #if this is not OK, adjust previous section accordingly
+        
+            #probability density function (arbitrary units) for transferring to each of the defined subclasses at tsi
+            #once again, the 'shape' of these curves is assumed to be same for all age classes.
+            phiR     = np.array([0,    0,    0.5,   3,     2,     0])  #rate of transferring to 'recovered' (arbitrary units)
+            phiH_in  = np.array([0,    0,    1,     1,     0,     0])  #rate that people enter hospital     (arbitrary units)
+            phiH_out = np.array([0,    0,    0,     1,     1,     0])  #rate that people enter hospital     (arbitrary units)
+            phiD     = np.array([0,    0,    0,     1,     1,    .5])  #times at which a person dies        (arbitrary units)
+        
+            #combine hospital in/out to a single function for net change in hospitalized cases
+            phiH = np.add(-phiH_out/np.trapz(phiH_out,tsi_sc),phiH_in/np.trapz(phiH_in,tsi_sc))
+        
+            #normalize all to one -- can then be rescaled by approprate pR, pH, pD, etc. at a later time
+            phiR = phiR/np.trapz(phiR,   tsi_sc)
+            phiH = phiH/np.trapz(phiH_in,tsi_sc)
+            phiD = phiD/np.trapz(phiD,   tsi_sc)
+        
+            #group them all together for later processing
+            self.phi_alpha = np.array([phiR, phiH, phiD])
+            self.p_alpha = np.array([pR, pH, pD])
+        else:
+            raise Exception('number of E stages should be greater than zero, kE>0')
+
+
 
     
-    def solve_Predictor_Corrector(parameters, IC, contactMatrix, hybrid=False, tstart=0):
+    def solve_Predictor_Corrector(self, parameters, contactMatrix, hybrid=False, tstart=0):
         ''' Predictor/Corrector is a finite difference method described in the TSI report, section 2.5
              It has good properties for speed and accuracy and should be preferred in most applications
              Notable disadvantage is a lack of flexibility in time-stepping -- you must increment by
              the same time step every time.  Function evaluations at intermediate times can be found by
              interpolation.
         '''
-        M  = parameters['M']                  
-        Nc = parameters['Nc']                   
-        Nk = parameters['Nk']                   
-        Tf = parameters['Tf']                   
+        M  = self.params['M']                  
+        Nc = self.params['Nc']                   
+        Nk = self.params['Nk']                   
+        Tf = self.params['Tf']                   
        
-        tsi       = parameters['tsi']
-        beta      = parameters['beta']                  
-        tsi_sc    = parameters['tsi_sc']                  
-        phi_alpha = parameters['phi_alpha']                  
-        p_alpha   = parameters['p_alpha']                  
+        tsi       = self.params['tsi']
+        beta      = self.params['beta']                  
+        tsi_sc    = self.params['tsi_sc']                  
+        
+        p_alpha   = self.p_alpha
+        phi_alpha = self.phi_alpha
+
 
         Cij_t = contactMatrix
 
-        S_0, I_0, Ic_0 = IC
+        S_0, I_0, Ic_0 = self.IC
     
         #set up the discretization in s
         s = np.linspace(-1,1,Nk)
@@ -123,7 +177,7 @@ cdef class Integrators:
             return t, S_t, I_t, Ic_t, [S, I, Ic]
     
     
-    def solve_Galerkin(parameters, IC, NL, G_method, contactMatrix, hybrid=False, tstart=0):
+    def solve_Galerkin(self, contactMatrix, hybrid=False, tstart=0):
         '''The Galerkin method is defined in the TSI report, section 2.6
          It spectral accuracy in s and allows for adatptive timestepping in t
          For constant contact matrix, use 'odeint', otherise use 'Crank Nicolson'
@@ -134,21 +188,24 @@ cdef class Integrators:
         
         For most practical purposes, we regard predictor/corrector as the preferred choice.
         '''
-        M  = parameters['M']                  
-        Nc = parameters['Nc']                   
-        Nk = parameters['Nk']                   
-        Tf = parameters['Tf']                   
+        M  = self.params['M']                  
+        Nc = self.params['Nc']                   
+        Nk = self.params['Nk']                   
+        NL = self.params['NL']                   
+        Tf = self.params['Tf']                   
+       
+        tsi       = self.params['tsi']
+        beta      = self.params['beta']                  
+        tsi_sc    = self.params['tsi_sc']                  
         
-        tsi       = parameters['tsi']
-        beta      = parameters['beta']                  
-        beta      = parameters['beta']                  
-        tsi_sc    = parameters['tsi_sc']                  
-        phi_alpha = parameters['phi_alpha']                  
-        p_alpha   = parameters['p_alpha']                  
+        p_alpha   = self.p_alpha
+        phi_alpha = self.phi_alpha
+
 
         Cij_t = contactMatrix
+        G_method = self.method
 
-        S_0, I_0, Ic_0 = IC
+        S_0, I_0, Ic_0 = self.IC
     
         #set up the discretization in s
         s = np.linspace(-1,1,1000)
@@ -443,3 +500,68 @@ cdef class Integrators:
                 return t, S_t, I_t, Ic_t, [S_0, I_0, Ic_0]
         else:
             print('please choose a valid method for solving Galerkin -- Crank Nicolson or odeint')
+
+
+
+    def integrate(self, contactMatrix):
+        M  = self.params['M']                  
+        T  = self.params['T']                   
+        Nc = self.params['Nc']                   
+        Nk = self.params['Nk']                   
+        NL = self.params['NL']                   
+        Tf = self.params['Tf']                   
+        
+        tsi       = self.params['tsi']
+        beta      = self.params['beta']                  
+        beta      = self.params['beta']                  
+        tsi_sc    = self.params['tsi_sc']                  
+        phi_alpha = self.params['phi_alpha']                  
+        p_alpha   = self.params['p_alpha']                  
+        tswap     = self.params['tswap']                  
+        method    = self.method
+        G_method  = self.integrator
+        
+        
+        if method == 'Predictor_Corrector':
+            t, S_t, I_t, Ic_t = self.solve_Predictor_Corrector(contactMatrix)
+
+        elif method == 'Galerkin':
+            t, S_t, I_t, Ic_t = self.solve_Galerkin(contactMatrix)
+        
+        elif method == 'Hybrid':
+            tc = 0
+            count = 0
+            while tc < Tf:
+                
+                #run the next simulation
+                if tc < tswap[count]:
+                    tstep = tswap[count] - tc
+                    self.params['Tf'] = tstep
+                    sol = self.solve_Galerkin(contactMatrix,True, tc)
+                else:
+                    tstep = 2
+                    self.params['Tf'] = tstep
+                    sol = self.solve_Predictor_Corrector(contactMatrix, True, tc)
+                    if count < len(tswap)-1:
+                        count += 1
+                
+                #unpack results
+                if count == 0 or (count == 1 and tc == 0):
+                    t, S_t, I_t, Ic_t, self.IC = sol
+                else:
+                    t  = np.concatenate((t,tc + sol[0]))
+                    nt = len(t); S_t_new = np.zeros((M,nt)); I_t_new = np.zeros((M,nt)); Ic_t_new = np.zeros((Nc,M,nt))
+                    for i in range(M):
+                        S_t_new[i,:] = np.append(S_t[i,:],sol[1][i,:])
+                    for i in range(M):
+                        I_t_new[i,:] = np.append(I_t[i,:],sol[2][i,:])
+                    for i in range(Nc):
+                        for j in range(M):
+                            Ic_t_new[i,j,:] = np.append(Ic_t[i,j,:],sol[3][i,j,:])
+                    self.IC = sol[4]
+                    S_t, I_t, Ic_t = [S_t_new, I_t_new, Ic_t_new]
+                
+                #prepare for next loop
+                tc = tc + tstep
+                #print(IC_t)
+        
