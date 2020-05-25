@@ -1,0 +1,18 @@
+name: pyross
+channels:
+  - conda-forge
+dependencies:
+  - python=3.7
+  - cython
+  - numpy
+  - matplotlib
+  - jupyter
+  - scipy 
+  - nlopt
+  - pathos
+  - pip
+  - pandas
+  - ipython
+  - nbconvert
+  - pip:
+    - cma

@@ -1,0 +1,10 @@
+cython
+jupyter
+matplotlib
+numpy
+pandas
+scipy
+pathos
+cma
+nlopt
+
