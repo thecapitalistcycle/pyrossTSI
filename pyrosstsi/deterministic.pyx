@@ -31,7 +31,7 @@ cdef class Simulator:
         list IC 
         np.ndarray phi_alpha, p_alpha
 
-    def __init__(self, parameters, IC, subclasses, method='Galerkin', galerkinIntegrator='odeint'):
+    def __init__(self, parameters, IC, subclasses, method='Predictor_Corrector', galerkinIntegrator='odeint'):
         self.params     = parameters
         self.method     = method
         self.galerkinIntegrator = galerkinIntegrator 

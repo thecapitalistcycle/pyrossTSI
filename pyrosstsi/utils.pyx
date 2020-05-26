@@ -7,6 +7,39 @@ cdef double PI = 3.1415926535
 from scipy.sparse import spdiags
 import matplotlib.pyplot as plt
 
+
+
+
+def get_IC(ep, M, Ni, Nc, Nk, Cij, T, Td, tsi, beta):
+    #Initial susceptible is the whole population
+    S_0 = Ni
+
+    #get I_0 from linear stability analysis
+    #find the fastest growing linear mode
+    A = np.matmul(np.diag(Ni),Cij)
+    A = np.matmul(A,np.diag(1/Ni))
+    sp = np.linspace(0,T,1000)
+    lam = np.log(2)/Td;
+    A = A*np.trapz(np.exp(-lam*sp)*np.interp(sp,tsi,beta),sp)
+    w, v = np.linalg.eig(-np.identity(M) + A)
+
+    #now identify the largest eigenvalue/eigenvector...
+    pos = np.where(w == np.amax(w))
+    pos = pos[0][0]
+    lam = T/Td*np.log(2)
+    s = np.linspace(-1,1,Nk)
+    I_0 = ep*np.abs(np.real(np.outer(np.exp(-lam*s),v[:,pos])))
+
+    #just set Ic_0 to zero -- these numbers are too small to matter
+    Ic_0 = np.zeros((Nc,M))
+    return S_0, I_0, Ic_0
+
+
+
+
+
+
+
 class GPR:
     def __init__(self, nS, nT, iP, nP, xS, xT, yT):
         self.nS   =  nS           # # of test data points
