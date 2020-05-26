@@ -27,14 +27,14 @@ cdef class Simulator:
     cdef:
         dict params
         str method
-        str integrator 
+        str galerkinIntegrator 
         list IC 
         np.ndarray phi_alpha, p_alpha
 
-    def __init__(self, parameters, IC, subclasses, method='Galerkin', integrator='odeint'):
+    def __init__(self, parameters, IC, subclasses, method='Galerkin', galerkinIntegrator='odeint'):
         self.params     = parameters
         self.method     = method
-        self.integrator = integrator 
+        self.galerkinIntegrator = galerkinIntegrator 
         self.IC         = IC
 
 
@@ -79,7 +79,7 @@ cdef class Simulator:
 
 
     
-    def solve_Predictor_Corrector(self, contactMatrix, hybrid=False, tstart=0):
+    def solve_Predictor_Corrector(self, contactMatrix, atol=1e-4, rtol=1e-3, tstart=0, hybrid=False):
         ''' Predictor/Corrector is a finite difference method described in the TSI report, section 2.5
              It has good properties for speed and accuracy and should be preferred in most applications
              Notable disadvantage is a lack of flexibility in time-stepping -- you must increment by
@@ -182,7 +182,7 @@ cdef class Simulator:
 
 
     
-    def solve_Galerkin(self, contactMatrix, hybrid=False, tstart=0):
+    def solve_Galerkin(self, contactMatrix, atol=1e-4, rtol=1e-3, tstart=0, hybrid=False):
         '''The Galerkin method is defined in the TSI report, section 2.6
          It spectral accuracy in s and allows for adatptive timestepping in t
          For constant contact matrix, use 'odeint', otherise use 'Crank Nicolson'
@@ -209,7 +209,7 @@ cdef class Simulator:
 
 
         Cij_t = contactMatrix
-        G_method = self.method
+        galerkinIntegrator  = self.galerkinIntegrator
 
         S_0, I_0, Ic_0 = self.IC
     
@@ -256,7 +256,7 @@ cdef class Simulator:
         I_t = 2*I[0]
         Ic_t = Ic_0
     
-        if G_method == 'Crank Nicolson':
+        if galerkinIntegrator == 'Crank Nicolson':
     
             #define a function to spit out time derivatives
             def get_dxdt(x, t):
@@ -334,8 +334,6 @@ cdef class Simulator:
                     print('solver maxed out')
                 return xp
     
-            etol = 10**-4 #absolute error tolerance of CN method
-            rtol = 10**-3 #relative error tolerance
             while t < Tf:
                 e_abs = 100
                 e_rel = 100
@@ -343,7 +341,7 @@ cdef class Simulator:
                 maxiter = 20
                 x = xh2
     
-                while (e_abs > etol or e_rel > rtol) and count < maxiter:
+                while (e_abs > atol or e_rel > rtol) and count < maxiter:
                     count+=1
                     if t + h > Tf:
                         h = Tf - t
@@ -361,8 +359,8 @@ cdef class Simulator:
     
                     #adaptive time stepping
                     #reduce time step if not meeting error tolerances
-                    if e_abs > etol:
-                        h = 0.8*h*(etol/e_abs)**.5
+                    if e_abs > atol:
+                        h = 0.8*h*(atol/e_abs)**.5
                     elif e_rel > rtol:
                         h = 0.8*h*(rtol/e_rel)**.5
     
@@ -403,10 +401,10 @@ cdef class Simulator:
                 if e_abs == 0:
                     h = 2*h
                 else:
-                    if e_rel/rtol >= e_abs/etol:
+                    if e_rel/rtol >= e_abs/atol:
                         h = 0.8*h*(rtol/e_rel)**.5
                     else:
-                        h = 0.8*h*(etol/e_abs)**.5
+                        h = 0.8*h*(atol/e_abs)**.5
     
                 if count == maxiter:
                     print('CN solver failed')
@@ -431,8 +429,7 @@ cdef class Simulator:
                         I_0[:,i] += Pn(sk)*I_end[i,j]
                 return t_t, np.transpose(np.reshape(S_t,(len(t_t),M))), np.transpose(np.reshape(I_t,(len(t_t),M))), Ic_t_reshape, [S_0, I_0, Ic_0]
     
-        elif G_method == 'odeint':
-            import odepsy
+        elif galerkinIntegrator == 'odeint':
             #compute time derivative w. explicit treatment of BC
             def get_dxdt(x, t):
                 Cij = Cij_t(tstart + t)
@@ -509,7 +506,7 @@ cdef class Simulator:
 
 
 
-    def integrate(self, contactMatrix):
+    def integrate(self, contactMatrix, atol=1e-4, rtol=1e-3):
         M  = self.params['M']                  
         T  = self.params['T']                   
         Nc = self.params['Nc']                   
@@ -524,16 +521,17 @@ cdef class Simulator:
         tswap     = self.params['tswap']                  
         
         method    = self.method
-        G_method  = self.integrator
+        galerkinIntegrator= self.galerkinIntegrator
         phi_alpha = self.phi_alpha
         p_alpha   = self.p_alpha                  
         
         
         if method == 'Predictor_Corrector':
-            t, S_t, I_t, Ic_t = self.solve_Predictor_Corrector(contactMatrix)
+            t, S_t, I_t, Ic_t = self.solve_Predictor_Corrector(contactMatrix, atol, rtol)
 
         elif method == 'Galerkin':
-            t, S_t, I_t, Ic_t = self.solve_Galerkin(contactMatrix)
+            tc=0
+            t, S_t, I_t, Ic_t = self.solve_Galerkin(contactMatrix, atol, rtol, tc, False)
         
         elif method == 'Hybrid':
             tc = 0
@@ -544,11 +542,11 @@ cdef class Simulator:
                 if tc < tswap[count]:
                     tstep = tswap[count] - tc
                     self.params['Tf'] = tstep
-                    sol = self.solve_Galerkin(contactMatrix,True, tc)
+                    sol = self.solve_Galerkin(contactMatrix, atol, rtol, tc, True)
                 else:
                     tstep = 2
                     self.params['Tf'] = tstep
-                    sol = self.solve_Predictor_Corrector(contactMatrix, True, tc)
+                    sol = self.solve_Predictor_Corrector(contactMatrix, atol, rtol, tc, True)
                     if count < len(tswap)-1:
                         count += 1
                 
