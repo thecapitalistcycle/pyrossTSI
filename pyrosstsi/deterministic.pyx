@@ -77,50 +77,6 @@ cdef class Simulator:
 
 
 
-    def nondimensionalize(self):
-        parameters = self.parameters
-        M = parameters['M']
-        Ni = parameters['Ni']
-        Nc = parameters['Nc']
-        Nk = parameters['Nk']
-    
-        T    = parameters['T']
-        Td   = parameters['Td']
-        Tf   = parameters['Tf']
-        Tc   = parameters['Tc']
-        tsi  = parameters['tsi']
-        beta = parameters['beta']
-         
-        contactMatrix = parameters['contactMatrix']
-        Cij = contactMatrix(0)
-        #precompUte Cij/Nj as a rescaled contact matrix:
-        def Cij_t(t):
-            return np.matmul(contactMatrix(t*Tc),np.diag(1/Ni))
-        self.parameters['contactMatrix'] = Cij_t
-    
-        A = np.matmul(np.diag(Ni),Cij);  
-        A = np.matmul(A,np.diag(1/Ni)); 
-        max_eig_A = np.max(np.real(np.linalg.eigvals(A)))
-        sp   = np.linspace(0,T,1000); lam = np.log(2)/Td;  #Growth rate
-        rs   = max_eig_A*np.trapz(np.exp(-lam*sp)*np.interp(sp,tsi,beta),sp)
-        beta = beta/rs       #now beta has been rescaled to give the correct (dimensional) doubling time
-        tsi = parameters['tsi']
-        tsi_sc = parameters['tsi_sc']
-        beta=beta*Tc; tsi=tsi/Tc-1;   tsi_sc=tsi_sc/Tc - 1
-        self.parameters['beta']   = beta
-        self.parameters['tsi']    = tsi
-        self.parameters['tsi_sc'] = tsi_sc
-    
-        if self.method=='Hybrid':
-            #rescale end time
-            tswap = parameters['tswap']
-            Tf = Tf/Tc; 
-            tswap = np.append(tswap/Tc, Tf)
-            self.parameters['tswap']=tswap
-        return 
-
-
-
     def get_IC(self):
         parameters = self.parameters
         M = parameters['M']
@@ -173,7 +129,8 @@ cdef class Simulator:
         Ni = Ni/Np
         I_0 = I_0/Np*Tc  #recall that this is a number density (number infected per unit tsi)
         S_0 = S_0/Np
-        Ic_0 = Ic_0/Np*Tc
+        if Nc > 0:
+            Ic_0 = Ic_0/Np*Tc
         IC = [S_0, I_0, Ic_0]
         return IC
     
@@ -182,7 +139,7 @@ cdef class Simulator:
     
     
     
-    def solve_Predictor_Corrector(self, contactMatrix, atol=1e-4, rtol=1e-3, tstart=0, hybrid=False):
+    def solve_Predictor_Corrector(self, atol=1e-4, rtol=1e-3, tstart=0, hybrid=False):
         ''' Predictor/Corrector is a finite difference method described in the TSI report, section 2.5
              It has good properties for speed and accuracy and should be preferred in most applications
              Notable disadvantage is a lack of flexibility in time-stepping -- you must increment by
@@ -190,23 +147,54 @@ cdef class Simulator:
              interpolation.
         '''
         M  = self.parameters['M']                  
+        Ni = self.parameters['Ni']                  
         Nc = self.parameters['Nc']                   
         Nk = self.parameters['Nk']                   
         Tf = self.parameters['Tf']                   
-        Tc = self.parameters['Tc']                   
+        T  = self.parameters['T']                   
+        Td = self.parameters['Tc']                   
+        Td = self.parameters['Td']                   
        
         tsi       = self.parameters['tsi']
         beta      = self.parameters['beta']                  
         tsi_sc    = self.parameters['tsi_sc']                  
         
+        contactMatrix = self.parameters['contactMatrix']
+        
         p_alpha   = self.p_alpha
-        phi_alpha = self.phi_alpha
+        phi_alpha = self.phi_alpha 
+        Np        = np.sum(Ni)
+        Ni = Ni/Np
 
 
-        Cij_t = contactMatrix
+        Tc = T/2 #rescaling of time, and tsi 
+        #first step is to rescale beta to a value consistent with the given Td
+        Cij = contactMatrix(0)
+        A = np.matmul(np.diag(Ni),Cij)
+        A = np.matmul(A,np.diag(1/Ni))
+        max_eig_A = np.max(np.real(np.linalg.eigvals(A)))
+        sp = np.linspace(0,T,1000)
+        lam = np.log(2)/Td;  #Growth rate
+        rs = max_eig_A*np.trapz(np.exp(-lam*sp)*np.interp(sp,tsi,beta),sp)
+        beta = beta/rs       #now beta has been rescaled to give the correct (dimensional) doubling time
+   
+        #nondimensionalize beta:
+        beta = beta*Tc
+        tsi = tsi/Tc - 1
+        
+        #rescale phi_alpha based on re-scaling of tsi:
+        tsi_sc = tsi_sc/Tc - 1
+        
+        #rescale end time
+        Tf = Tf/Tc
 
-        S_0, I_0, Ic_0 = self.IC
-    
+        def Cij_t(t):
+            return np.matmul(contactMatrix(t*Tc),np.diag(1/Ni))
+
+
+        S_0, I_0, Ic_0 = self.IC 
+   
+ 
         #set up the discretization in s
         s = np.linspace(-1,1,Nk)
         h = 2/(Nk - 1)
@@ -275,7 +263,6 @@ cdef class Simulator:
             S_t[:,i]     = S
             I_t[:,i]     = np.matmul(w,I)
             Ic_t[:,:, i] = Ic 
-            print(S)
     
         if not hybrid:
             return t, S_t, I_t, Ic_t
@@ -630,7 +617,7 @@ cdef class Simulator:
         contactMatrix = self.parameters['contactMatrix']
         
         if method == 'Predictor_Corrector':
-            t, S_t, I_t, Ic_t = self.solve_Predictor_Corrector(contactMatrix, atol, rtol)
+            t, S_t, I_t, Ic_t = self.solve_Predictor_Corrector(atol, rtol)
 
         elif method == 'Galerkin':
             tc=0
