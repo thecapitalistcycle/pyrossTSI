@@ -25,17 +25,16 @@ cdef class Simulator:
     solve_Galerkin: 
     """
     cdef:
-        dict parameters
-        str method
-        str galerkinIntegrator 
-        list IC 
-        np.ndarray phi_alpha, p_alpha
+        readonly dict parameters
+        readonly str method
+        readonly str galerkinIntegrator 
+        readonly list IC 
+        readonly np.ndarray phi_alpha, p_alpha
 
-    def __init__(self, parameters, IC, subclasses, method='Predictor_Corrector', galerkinIntegrator='odeint'):
+    def __init__(self, parameters, subclasses, method='Predictor_Corrector', galerkinIntegrator='odeint'):
         self.parameters     = parameters
         self.method     = method
         self.galerkinIntegrator = galerkinIntegrator 
-        self.IC         = IC
 
 
         #Define sub-classes of infecteds - optional
@@ -78,12 +77,59 @@ cdef class Simulator:
 
 
 
+    def nondimensionalize(self):
+        parameters = self.parameters
+        M = parameters['M']
+        Ni = parameters['Ni']
+        Nc = parameters['Nc']
+        Nk = parameters['Nk']
+    
+        T    = parameters['T']
+        Td   = parameters['Td']
+        Tf   = parameters['Tf']
+        Tc   = parameters['Tc']
+        tsi  = parameters['tsi']
+        beta = parameters['beta']
+         
+        contactMatrix = parameters['contactMatrix']
+        Cij = contactMatrix(0)
+        #precompUte Cij/Nj as a rescaled contact matrix:
+        def Cij_t(t):
+            return np.matmul(contactMatrix(t*Tc),np.diag(1/Ni))
+        self.parameters['contactMatrix'] = Cij_t
+    
+        A = np.matmul(np.diag(Ni),Cij);  
+        A = np.matmul(A,np.diag(1/Ni)); 
+        max_eig_A = np.max(np.real(np.linalg.eigvals(A)))
+        sp   = np.linspace(0,T,1000); lam = np.log(2)/Td;  #Growth rate
+        rs   = max_eig_A*np.trapz(np.exp(-lam*sp)*np.interp(sp,tsi,beta),sp)
+        beta = beta/rs       #now beta has been rescaled to give the correct (dimensional) doubling time
+        tsi = parameters['tsi']
+        tsi_sc = parameters['tsi_sc']
+        beta=beta*Tc; tsi=tsi/Tc-1;   tsi_sc=tsi_sc/Tc - 1
+        self.parameters['beta']   = beta
+        self.parameters['tsi']    = tsi
+        self.parameters['tsi_sc'] = tsi_sc
+    
+        if self.method=='Hybrid':
+            #rescale end time
+            tswap = parameters['tswap']
+            Tf = Tf/Tc; 
+            tswap = np.append(tswap/Tc, Tf)
+            self.parameters['tswap']=tswap
+        return 
+
+
+
     def get_IC(self):
         parameters = self.parameters
         M = parameters['M']
         Ni = parameters['Ni']
         Nc = parameters['Nc']
         Nk = parameters['Nk']
+        contactMatrix = parameters['contactMatrix']
+        Cij = contactMatrix(0)
+    
     
         Np = sum(Ni)            #total population size
     
@@ -92,12 +138,15 @@ cdef class Simulator:
         Tc   = parameters['Tc']
         tsi  = parameters['tsi']
         beta = parameters['beta']
+        A = np.matmul(np.diag(Ni),Cij);  
+        A = np.matmul(A,np.diag(1/Ni)); 
+        max_eig_A = np.max(np.real(np.linalg.eigvals(A)))
+        sp   = np.linspace(0,T,1000); lam = np.log(2)/Td;  #Growth rate
+        rs   = max_eig_A*np.trapz(np.exp(-lam*sp)*np.interp(sp,tsi,beta),sp)
+        beta = beta/rs       #now beta has been rescaled to give the correct (dimensional) doubling time
         
-        ep = 10**-3/T*Np
+        ep = 0.001/T*Np
         
-        contactMatrix = parameters['contactMatrix']
-        Cij = contactMatrix(0)
-    
         #Initial susceptible is the whole population
         S_0 = Ni
     
@@ -116,7 +165,7 @@ cdef class Simulator:
         lam = T/Td*np.log(2)
         s = np.linspace(-1,1,Nk)
         I_0 = ep*np.abs(np.real(np.outer(np.exp(-lam*s),v[:,pos])))
-    
+ 
         #just set Ic_0 to zero -- these numbers are too small to matter
         Ic_0 = np.zeros((Nc,M))
     
@@ -128,50 +177,6 @@ cdef class Simulator:
         IC = [S_0, I_0, Ic_0]
         return IC
     
-    
-    
-    def nondimensionalize(self):
-        parameters = self.parameters
-        M = parameters['M']
-        Ni = parameters['Ni']
-        Nc = parameters['Nc']
-        Nk = parameters['Nk']
-    
-        T    = parameters['T']
-        Td   = parameters['Td']
-        Tf   = parameters['Tf']
-        Tc   = parameters['Tc']
-        tsi  = parameters['tsi']
-        beta = parameters['beta']
-         
-        contactMatrix = parameters['contactMatrix']
-        Cij = contactMatrix(0)
-    
-        A = np.matmul(np.diag(Ni),Cij);  
-        A = np.matmul(A,np.diag(1/Ni)); 
-        max_eig_A = np.max(np.real(np.linalg.eigvals(A)))
-        
-        sp   = np.linspace(0,T,1000); lam = np.log(2)/Td;  #Growth rate
-        rs   = max_eig_A*np.trapz(np.exp(-lam*sp)*np.interp(sp,tsi,beta),sp)
-        beta = beta/rs       #now beta has been rescaled to give the correct (dimensional) doubling time
-    
-        #precompute Cij/Nj as a rescaled contact matrix:
-        def Cij_t(t):
-            return np.matmul(contactMatrix(t*Tc),np.diag(1/Ni))
-    
-        tsi = parameters['tsi']
-        tsi_sc = parameters['tsi_sc']
-        beta=beta*Tc; tsi=tsi/Tc-1;   tsi_sc=tsi_sc/Tc - 1
-    
-        #rescale end time
-        tswap = parameters['tswap']
-        Tf = Tf/Tc; 
-        tswap = np.append(tswap/Tc, Tf)
-    
-        parameters['tswap']=tswap
-        parameters['tswap']=tswap
-        parameters['contactMatrix']=Cij_t
-        return parameters
     
     
     
@@ -270,7 +275,7 @@ cdef class Simulator:
             S_t[:,i]     = S
             I_t[:,i]     = np.matmul(w,I)
             Ic_t[:,:, i] = Ic 
-
+            print(S)
     
         if not hybrid:
             return t, S_t, I_t, Ic_t
@@ -604,19 +609,18 @@ cdef class Simulator:
 
 
 
-    def integrate(self,  atol=1e-4, rtol=1e-3):
+    def integrate(self, IC, atol=1e-4, rtol=1e-3):
+        self.IC = IC
         M  = self.parameters['M']                  
         T  = self.parameters['T']                   
         Nc = self.parameters['Nc']                   
         Nk = self.parameters['Nk']                   
-        NL = self.parameters['NL']                   
         Tf = self.parameters['Tf']                   
         
         tsi       = self.parameters['tsi']
         beta      = self.parameters['beta']                  
         beta      = self.parameters['beta']                  
         tsi_sc    = self.parameters['tsi_sc']                  
-        tswap     = self.parameters['tswap']                  
         
         method    = self.method
         galerkinIntegrator= self.galerkinIntegrator
@@ -634,6 +638,7 @@ cdef class Simulator:
         
         elif method == 'Hybrid':
             tc = 0
+            tswap = self.parameters['tswap']
             count = 0
             while tc < Tf:
                 
