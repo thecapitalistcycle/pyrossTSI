@@ -25,14 +25,14 @@ cdef class Simulator:
     solve_Galerkin: 
     """
     cdef:
-        dict params
+        dict parameters
         str method
         str galerkinIntegrator 
         list IC 
         np.ndarray phi_alpha, p_alpha
 
     def __init__(self, parameters, IC, subclasses, method='Predictor_Corrector', galerkinIntegrator='odeint'):
-        self.params     = parameters
+        self.parameters     = parameters
         self.method     = method
         self.galerkinIntegrator = galerkinIntegrator 
         self.IC         = IC
@@ -78,6 +78,104 @@ cdef class Simulator:
 
 
 
+    def get_IC(self):
+        parameters = self.parameters
+        M = parameters['M']
+        Ni = parameters['Ni']
+        Nc = parameters['Nc']
+        Nk = parameters['Nk']
+    
+        Np = sum(Ni)            #total population size
+    
+        T    = parameters['T']
+        Td   = parameters['Td']
+        Tc   = parameters['Tc']
+        tsi  = parameters['tsi']
+        beta = parameters['beta']
+        
+        ep = 10**-3/T*Np
+        
+        contactMatrix = parameters['contactMatrix']
+        Cij = contactMatrix(0)
+    
+        #Initial susceptible is the whole population
+        S_0 = Ni
+    
+        #get I_0 from linear stability analysis
+        #find the fastest growing linear mode
+        A = np.matmul(np.diag(Ni),Cij)
+        A = np.matmul(A,np.diag(1/Ni))
+        sp = np.linspace(0,T,1000)
+        lam = np.log(2)/Td;
+        A = A*np.trapz(np.exp(-lam*sp)*np.interp(sp,tsi,beta),sp)
+        w, v = np.linalg.eig(-np.identity(M) + A)
+    
+        #now identify the largest eigenvalue/eigenvector...
+        pos = np.where(w == np.amax(w))
+        pos = pos[0][0]
+        lam = T/Td*np.log(2)
+        s = np.linspace(-1,1,Nk)
+        I_0 = ep*np.abs(np.real(np.outer(np.exp(-lam*s),v[:,pos])))
+    
+        #just set Ic_0 to zero -- these numbers are too small to matter
+        Ic_0 = np.zeros((Nc,M))
+    
+        #rescale all population sizes
+        Ni = Ni/Np
+        I_0 = I_0/Np*Tc  #recall that this is a number density (number infected per unit tsi)
+        S_0 = S_0/Np
+        Ic_0 = Ic_0/Np*Tc
+        IC = [S_0, I_0, Ic_0]
+        return IC
+    
+    
+    
+    def nondimensionalize(self):
+        parameters = self.parameters
+        M = parameters['M']
+        Ni = parameters['Ni']
+        Nc = parameters['Nc']
+        Nk = parameters['Nk']
+    
+        T    = parameters['T']
+        Td   = parameters['Td']
+        Tf   = parameters['Tf']
+        Tc   = parameters['Tc']
+        tsi  = parameters['tsi']
+        beta = parameters['beta']
+         
+        contactMatrix = parameters['contactMatrix']
+        Cij = contactMatrix(0)
+    
+        A = np.matmul(np.diag(Ni),Cij);  
+        A = np.matmul(A,np.diag(1/Ni)); 
+        max_eig_A = np.max(np.real(np.linalg.eigvals(A)))
+        
+        sp   = np.linspace(0,T,1000); lam = np.log(2)/Td;  #Growth rate
+        rs   = max_eig_A*np.trapz(np.exp(-lam*sp)*np.interp(sp,tsi,beta),sp)
+        beta = beta/rs       #now beta has been rescaled to give the correct (dimensional) doubling time
+    
+        #precompute Cij/Nj as a rescaled contact matrix:
+        def Cij_t(t):
+            return np.matmul(contactMatrix(t*Tc),np.diag(1/Ni))
+    
+        tsi = parameters['tsi']
+        tsi_sc = parameters['tsi_sc']
+        beta=beta*Tc; tsi=tsi/Tc-1;   tsi_sc=tsi_sc/Tc - 1
+    
+        #rescale end time
+        tswap = parameters['tswap']
+        Tf = Tf/Tc; 
+        tswap = np.append(tswap/Tc, Tf)
+    
+        parameters['tswap']=tswap
+        parameters['tswap']=tswap
+        parameters['contactMatrix']=Cij_t
+        return parameters
+    
+    
+    
+    
     
     def solve_Predictor_Corrector(self, contactMatrix, atol=1e-4, rtol=1e-3, tstart=0, hybrid=False):
         ''' Predictor/Corrector is a finite difference method described in the TSI report, section 2.5
@@ -86,15 +184,15 @@ cdef class Simulator:
              the same time step every time.  Function evaluations at intermediate times can be found by
              interpolation.
         '''
-        M  = self.params['M']                  
-        Nc = self.params['Nc']                   
-        Nk = self.params['Nk']                   
-        Tf = self.params['Tf']                   
-        Tc = self.params['Tc']                   
+        M  = self.parameters['M']                  
+        Nc = self.parameters['Nc']                   
+        Nk = self.parameters['Nk']                   
+        Tf = self.parameters['Tf']                   
+        Tc = self.parameters['Tc']                   
        
-        tsi       = self.params['tsi']
-        beta      = self.params['beta']                  
-        tsi_sc    = self.params['tsi_sc']                  
+        tsi       = self.parameters['tsi']
+        beta      = self.parameters['beta']                  
+        tsi_sc    = self.parameters['tsi_sc']                  
         
         p_alpha   = self.p_alpha
         phi_alpha = self.phi_alpha
@@ -193,16 +291,16 @@ cdef class Simulator:
         
         For most practical purposes, we regard predictor/corrector as the preferred choice.
         '''
-        M  = self.params['M']                  
-        Nc = self.params['Nc']                   
-        Nk = self.params['Nk']                   
-        NL = self.params['NL']                   
-        Tf = self.params['Tf']                   
-        Tc = self.params['Tc']                   
+        M  = self.parameters['M']                  
+        Nc = self.parameters['Nc']                   
+        Nk = self.parameters['Nk']                   
+        NL = self.parameters['NL']                   
+        Tf = self.parameters['Tf']                   
+        Tc = self.parameters['Tc']                   
        
-        tsi       = self.params['tsi']
-        beta      = self.params['beta']                  
-        tsi_sc    = self.params['tsi_sc']                  
+        tsi       = self.parameters['tsi']
+        beta      = self.parameters['beta']                  
+        tsi_sc    = self.parameters['tsi_sc']                  
         
         p_alpha   = self.p_alpha
         phi_alpha = self.phi_alpha
@@ -506,25 +604,26 @@ cdef class Simulator:
 
 
 
-    def integrate(self, contactMatrix, atol=1e-4, rtol=1e-3):
-        M  = self.params['M']                  
-        T  = self.params['T']                   
-        Nc = self.params['Nc']                   
-        Nk = self.params['Nk']                   
-        NL = self.params['NL']                   
-        Tf = self.params['Tf']                   
+    def integrate(self,  atol=1e-4, rtol=1e-3):
+        M  = self.parameters['M']                  
+        T  = self.parameters['T']                   
+        Nc = self.parameters['Nc']                   
+        Nk = self.parameters['Nk']                   
+        NL = self.parameters['NL']                   
+        Tf = self.parameters['Tf']                   
         
-        tsi       = self.params['tsi']
-        beta      = self.params['beta']                  
-        beta      = self.params['beta']                  
-        tsi_sc    = self.params['tsi_sc']                  
-        tswap     = self.params['tswap']                  
+        tsi       = self.parameters['tsi']
+        beta      = self.parameters['beta']                  
+        beta      = self.parameters['beta']                  
+        tsi_sc    = self.parameters['tsi_sc']                  
+        tswap     = self.parameters['tswap']                  
         
         method    = self.method
         galerkinIntegrator= self.galerkinIntegrator
         phi_alpha = self.phi_alpha
         p_alpha   = self.p_alpha                  
         
+        contactMatrix = self.parameters['contactMatrix']
         
         if method == 'Predictor_Corrector':
             t, S_t, I_t, Ic_t = self.solve_Predictor_Corrector(contactMatrix, atol, rtol)
@@ -541,11 +640,11 @@ cdef class Simulator:
                 #run the next simulation
                 if tc < tswap[count]:
                     tstep = tswap[count] - tc
-                    self.params['Tf'] = tstep
+                    self.parameters['Tf'] = tstep
                     sol = self.solve_Galerkin(contactMatrix, atol, rtol, tc, True)
                 else:
                     tstep = 2
-                    self.params['Tf'] = tstep
+                    self.parameters['Tf'] = tstep
                     sol = self.solve_Predictor_Corrector(contactMatrix, atol, rtol, tc, True)
                     if count < len(tswap)-1:
                         count += 1
