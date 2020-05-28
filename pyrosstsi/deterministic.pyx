@@ -31,49 +31,13 @@ cdef class Simulator:
         readonly list IC 
         readonly np.ndarray phi_alpha, p_alpha
 
-    def __init__(self, parameters, subclasses, method='Predictor_Corrector', galerkinIntegrator='odeint'):
-        self.parameters     = parameters
-        self.method     = method
+    def __init__(self, parameters, phi_alpha, p_alpha, method='Predictor_Corrector', galerkinIntegrator='odeint'):
+        self.parameters         = parameters
+        self.method             = method
         self.galerkinIntegrator = galerkinIntegrator 
-
-
-        #Define sub-classes of infecteds - optional
-        #subclasses = ['Recovered', 'Hospitalized', 'Deceased'] #e.g. Recovered, Hospitalized, Deceased
-        Nc = len(subclasses)
         
-        #Describe the dynamics of how people move in and out of subclasses.  See section 2.2 of report
-        if Nc > 0:
-            M = parameters['M']
-            #define the probability of eventually having membership in one
-            pR = 0.99*np.ones(M);  #probability of eventually recovering for each age class
-            pH = 0.05*np.ones(M);  #probability of needing hospitalization for each age class
-            pD = 1-pR;             #probability of death for each age class
-        
-            #prepare for a linear interpolating function evaluated at times:
-            tsi_sc = parameters['tsi_sc']
-            #tsi_sc  =  np.array([0,   3.,    6.,    9.,   12,    T])  #For convenience, we say that you reach your final state at time T
-                                                                      #if this is not OK, adjust previous section accordingly
-        
-            #probability density function (arbitrary units) for transferring to each of the defined subclasses at tsi
-            #once again, the 'shape' of these curves is assumed to be same for all age classes.
-            phiR     = np.array([0,    0,    0.5,   3,     2,     0])  #rate of transferring to 'recovered' (arbitrary units)
-            phiH_in  = np.array([0,    0,    1,     1,     0,     0])  #rate that people enter hospital     (arbitrary units)
-            phiH_out = np.array([0,    0,    0,     1,     1,     0])  #rate that people enter hospital     (arbitrary units)
-            phiD     = np.array([0,    0,    0,     1,     1,    .5])  #times at which a person dies        (arbitrary units)
-        
-            #combine hospital in/out to a single function for net change in hospitalized cases
-            phiH = np.add(-phiH_out/np.trapz(phiH_out,tsi_sc),phiH_in/np.trapz(phiH_in,tsi_sc))
-        
-            #normalize all to one -- can then be rescaled by approprate pR, pH, pD, etc. at a later time
-            phiR = phiR/np.trapz(phiR,   tsi_sc)
-            phiH = phiH/np.trapz(phiH_in,tsi_sc)
-            phiD = phiD/np.trapz(phiD,   tsi_sc)
-        
-            #group them all together for later processing
-            self.phi_alpha = np.array([phiR, phiH, phiD])*parameters['Tc']
-            self.p_alpha = np.array([pR, pH, pD])
-        else:
-            raise Exception('number of E stages should be greater than zero, kE>0')
+        self.phi_alpha= phi_alpha
+        self.p_alpha  = p_alpha  
 
 
 
@@ -160,6 +124,8 @@ cdef class Simulator:
         tsi_sc    = self.parameters['tsi_sc']                  
         
         contactMatrix = self.parameters['contactMatrix']
+        def Cij_t(t):
+            return np.matmul(contactMatrix(t*Tc),np.diag(1/Ni))
         
         p_alpha   = self.p_alpha
         phi_alpha = self.phi_alpha 
@@ -188,8 +154,6 @@ cdef class Simulator:
         #rescale end time
         Tf = Tf/Tc
 
-        def Cij_t(t):
-            return np.matmul(contactMatrix(t*Tc),np.diag(1/Ni))
 
 
         S_0, I_0, Ic_0 = self.IC 
@@ -272,7 +236,7 @@ cdef class Simulator:
 
 
     
-    def solve_Galerkin(self, contactMatrix, atol=1e-4, rtol=1e-3, tstart=0, hybrid=False):
+    def solve_Galerkin(self, atol=1e-4, rtol=1e-3, tstart=0, hybrid=False):
         '''The Galerkin method is defined in the TSI report, section 2.6
          It spectral accuracy in s and allows for adatptive timestepping in t
          For constant contact matrix, use 'odeint', otherise use 'Crank Nicolson'
@@ -284,6 +248,7 @@ cdef class Simulator:
         For most practical purposes, we regard predictor/corrector as the preferred choice.
         '''
         M  = self.parameters['M']                  
+        Ni = self.parameters['Ni']                   
         Nc = self.parameters['Nc']                   
         Nk = self.parameters['Nk']                   
         NL = self.parameters['NL']                   
@@ -296,6 +261,10 @@ cdef class Simulator:
         
         p_alpha   = self.p_alpha
         phi_alpha = self.phi_alpha
+        
+        contactMatrix = self.parameters['contactMatrix']
+        def Cij_t(t):
+            return np.matmul(contactMatrix(t*Tc),np.diag(1/Ni))
 
 
         Cij_t = contactMatrix
@@ -621,7 +590,7 @@ cdef class Simulator:
 
         elif method == 'Galerkin':
             tc=0
-            t, S_t, I_t, Ic_t = self.solve_Galerkin(contactMatrix, atol, rtol, tc, False)
+            t, S_t, I_t, Ic_t = self.solve_Galerkin(atol, rtol, tc, False)
         
         elif method == 'Hybrid':
             tc = 0
@@ -633,11 +602,11 @@ cdef class Simulator:
                 if tc < tswap[count]:
                     tstep = tswap[count] - tc
                     self.parameters['Tf'] = tstep
-                    sol = self.solve_Galerkin(contactMatrix, atol, rtol, tc, True)
+                    sol = self.solve_Galerkin(atol, rtol, tc, True)
                 else:
                     tstep = 2
                     self.parameters['Tf'] = tstep
-                    sol = self.solve_Predictor_Corrector(contactMatrix, atol, rtol, tc, True)
+                    sol = self.solve_Predictor_Corrector(atol, rtol, tc, True)
                     if count < len(tswap)-1:
                         count += 1
                 
