@@ -6,6 +6,7 @@ from distutils.extension import Extension
 import Cython.Compiler.Options
 Cython.Compiler.Options.annotate=True
 
+
 if 'darwin' == (sys.platform).lower():
     extension = Extension("pyrosstsi/*", ["pyrosstsi/*.pyx"],
         include_dirs=[numpy.get_include()],
@@ -16,6 +17,7 @@ else:
     extension = Extension("pyrosstsi/*", ["pyrosstsi/*.pyx"],
         include_dirs=[numpy.get_include()],
     )
+
 
 setup(
     name='PyRossTSI',

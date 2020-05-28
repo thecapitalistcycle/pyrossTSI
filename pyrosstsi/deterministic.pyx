@@ -2,7 +2,6 @@ import  numpy as np
 cimport numpy as np
 cimport cython
 from libc.stdlib cimport malloc, free
-import pyross.utils
 import warnings
 from scipy.special import legendre
 import matplotlib.pyplot as plt
@@ -565,7 +564,7 @@ cdef class Simulator:
 
 
 
-    def integrate(self, IC, atol=1e-4, rtol=1e-3):
+    def simulate(self, IC, atol=1e-4, rtol=1e-3):
         self.IC = IC
         M  = self.parameters['M']                  
         T  = self.parameters['T']                   
