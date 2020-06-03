@@ -23,6 +23,8 @@ cdef class Simulator:
 
     solve_Galerkin: 
     """
+
+
     cdef:
         readonly dict parameters
         readonly str method
@@ -30,13 +32,10 @@ cdef class Simulator:
         readonly list IC 
         readonly np.ndarray phi_alpha, p_alpha
 
-    def __init__(self, parameters, phi_alpha, p_alpha, method='Predictor_Corrector', galerkinIntegrator='odeint'):
+    def __init__(self, parameters, method='Predictor_Corrector', galerkinIntegrator='odeint'):
         self.parameters         = parameters
         self.method             = method
         self.galerkinIntegrator = galerkinIntegrator 
-        
-        self.phi_alpha= phi_alpha
-        self.p_alpha  = p_alpha  
 
 
 
@@ -102,7 +101,7 @@ cdef class Simulator:
     
     
     
-    def solve_Predictor_Corrector(self, atol=1e-4, rtol=1e-3, tstart=0, hybrid=False):
+    def solve_Predictor_Corrector(self, tstart=0, hybrid=False):
         ''' Predictor/Corrector is a finite difference method described in the TSI report, section 2.5
              It has good properties for speed and accuracy and should be preferred in most applications
              Notable disadvantage is a lack of flexibility in time-stepping -- you must increment by
@@ -120,16 +119,16 @@ cdef class Simulator:
        
         tsi       = self.parameters['tsi']
         beta      = self.parameters['beta']                  
-        tsi_sc    = self.parameters['tsi_sc']                  
+        tsi_sc    = self.parameters['tsi_sc']
+
+        p_alpha   = self.parameters['p_alpha']
+        phi_alpha = self.parameters['phi_alpha']
+        Np        = np.sum(Ni)
+        Ni = Ni/Np                  
         
         contactMatrix = self.parameters['contactMatrix']
         def Cij_t(t):
             return np.matmul(contactMatrix(t*Tc),np.diag(1/Ni))
-        
-        p_alpha   = self.p_alpha
-        phi_alpha = self.phi_alpha 
-        Np        = np.sum(Ni)
-        Ni = Ni/Np
 
 
         Tc = T/2 #rescaling of time, and tsi 
@@ -153,7 +152,8 @@ cdef class Simulator:
         #rescale end time
         Tf = Tf/Tc
 
-
+        #rescale phi_alpha
+        phi_alpha = phi_alpha*Tc
 
         S_0, I_0, Ic_0 = self.IC 
    
@@ -252,22 +252,54 @@ cdef class Simulator:
         Nk = self.parameters['Nk']                   
         NL = self.parameters['NL']                   
         Tf = self.parameters['Tf']                   
-        Tc = self.parameters['Tc']                   
+        Tc = self.parameters['Tc']
+        Td = self.parameters['Td']
+        T  = self.parameters['T']                   
        
         tsi       = self.parameters['tsi']
         beta      = self.parameters['beta']                  
         tsi_sc    = self.parameters['tsi_sc']                  
         
-        p_alpha   = self.p_alpha
-        phi_alpha = self.phi_alpha
+        p_alpha   = self.parameters['p_alpha']
+        phi_alpha = self.parameters['phi_alpha']
+
+        galerkinIntegrator = self.galerkinIntegrator
+
+        Np        = np.sum(Ni)
+        Ni = Ni/Np                  
         
         contactMatrix = self.parameters['contactMatrix']
         def Cij_t(t):
             return np.matmul(contactMatrix(t*Tc),np.diag(1/Ni))
 
 
-        Cij_t = contactMatrix
+        Tc = T/2 #rescaling of time, and tsi 
+        #first step is to rescale beta to a value consistent with the given Td
+        Cij = contactMatrix(0)
+        A = np.matmul(np.diag(Ni),Cij)
+        A = np.matmul(A,np.diag(1/Ni))
+        max_eig_A = np.max(np.real(np.linalg.eigvals(A)))
+        sp = np.linspace(0,T,1000)
+        lam = np.log(2)/Td;  #Growth rate
+        rs = max_eig_A*np.trapz(np.exp(-lam*sp)*np.interp(sp,tsi,beta),sp)
+        beta = beta/rs       #now beta has been rescaled to give the correct (dimensional) doubling time
+   
+        #nondimensionalize beta:
+        beta = beta*Tc
+        tsi = tsi/Tc - 1
+        
+        #rescale phi_alpha based on re-scaling of tsi:
+        tsi_sc = tsi_sc/Tc - 1
+        
+        #rescale end time
+        Tf = Tf/Tc
+
+        #rescale phi_alpha
+        phi_alpha = phi_alpha*Tc
+
+
         galerkinIntegrator  = self.galerkinIntegrator
+
 
         S_0, I_0, Ic_0 = self.IC
     
@@ -330,7 +362,7 @@ cdef class Simulator:
     
             #define a function to give 'residuals' based on current estimate of next time step
             def get_res(x, xp, t, dt):
-                Cij = Cij_t(tstart + t)
+                #Cij = Cij_t(tstart + t)
                 S = x[:M]
                 I = np.transpose(np.reshape(x[M:],(M,NL)))
                 Sp = xp[:M]
@@ -342,11 +374,9 @@ cdef class Simulator:
                     res[M + i*NL + NL - 1] = np.matmul((-1.)**np.array(range(NL)),Ip[:,i]) + dxdt_i[i]
                 return res
     
-            ##EVERYTHING'S WORKING EXCEPT THE JACOBIAN HERE
-    
             #define a function to compute Jacobians.
             def get_J(x, t, dt):
-                Cij = Cij_t(tstart + t)
+                Cij = Cij_t(tstart + t + dt)
                 S = x[:M]
                 I = np.transpose(np.reshape(x[M:],(M,NL)))
                 J = np.zeros((len(x),len(x)))
@@ -362,7 +392,7 @@ cdef class Simulator:
                         J[M + NL*i + j, (i*NL + M):(i*NL + M + NL)] = q[j,:]
                 for i in range(M):
                     J[M + i*NL + NL - 1,i] = -np.matmul(Cij[i,:],np.matmul(beta_n,I))
-                    J[M + i*NL + NL - 1,(M + i*NL):(M + i*NL + NL)] = (-1)**np.array(range(NL))
+                    J[M + i*NL + NL - 1,(M + i*NL):(M + i*NL + NL)] = (-1)**np.arange(NL)
                     for j in range(M):
                         J[M + i*NL + NL - 1,(M + j*NL):(M + j*NL + NL)] += - S[i]*Cij[i,j]*beta_n
                 return J
@@ -377,16 +407,15 @@ cdef class Simulator:
             def get_next_step(x,x0,t,dt):
                 xp = x0 + 0
                 res = get_res(x,xp,t,dt)
-                ep = np.amax(np.abs(res))
-                tol = 10**-8  #error tolerance of root finding
+                err = np.amax(np.abs(res))
                 count = 0
                 maxiter = 100
-                while ep > tol and count < maxiter:
+                while np.greater(err,0.000001) and count < maxiter:
                     J = get_J(xp,t,dt)
                     dx = np.linalg.solve(J,res)
                     xp += -dx
                     res = get_res(x, xp, t, dt)
-                    ep = np.amax(np.abs(res))
+                    err = np.amax(np.abs(res))
                     count += 1
                 if count == maxiter:
                     print('solver maxed out')
@@ -528,7 +557,7 @@ cdef class Simulator:
             nt = len(t)
     
             #get solution
-            u = odeint(get_dxdt, x0, t)
+            u = odeint(get_dxdt, x0, t,rtol = rtol, atol = atol)
     
             #transform solution to get outputs
             S_t = np.transpose(u[:,:M])
@@ -563,6 +592,206 @@ cdef class Simulator:
             print('please choose a valid method for solving Galerkin -- Crank Nicolson or odeint')
 
 
+    def solve_Predictor_CorrectorQ(self):
+        ''' This is a predictor corrector method specifically for epidemics with two quarantine classes:
+            (1) Voluntary quarantines -- people move in and out based on the current advice/symptoms, no concern for history
+            (2) Assigned quarantines -- whether a person is quarantined or not depends on testing capabilities in the past
+            Voluntary quarantines are all assumed to end before time T, whereas assigned quarantines are assumed to all last
+            beyond time T.
+        '''
+        M  = self.parameters['M']                  
+        Ni = self.parameters['Ni']                  
+        Nc = self.parameters['Nc']                   
+        Nk = self.parameters['Nk']                   
+        Tf = self.parameters['Tf']                   
+        T  = self.parameters['T']                   
+        Td = self.parameters['Tc']                   
+        Td = self.parameters['Td']                   
+       
+        tsi       = self.parameters['tsi']
+        beta      = self.parameters['beta']                  
+        tsi_sc    = self.parameters['tsi_sc']
+
+        p_alpha   = self.parameters['p_alpha']
+        phi_alpha = self.parameters['phi_alpha']
+        Np        = np.sum(Ni)
+        Ni = Ni/Np
+
+        #unbundle quarantine parameters:
+        tsiQ = self.parameters['tsiQ']
+        TQ = self.parameters['TQ']
+        PhiQV = self.parameters['PhiQV']
+        phiQA = self.parameters['phiQA']
+        Phi_QA_0 = self.parameters['Phi_QA_0']
+        pQV = self.parameters['pQV_t']
+        pQA = self.parameters['pQA_t']
+
+        contactMatrixQ = self.parameters['CijQ_t']
+        def CijQ_t(t):
+            return np.matmul(contactMatrixQ(t*Tc),np.diag(1/Ni))
+        def pQV_t(t):
+            return pQV(t*Tc)
+        def pQA_t(t):
+            return pQA(t*Tc)
+        
+        contactMatrix = self.parameters['contactMatrix']
+        def Cij_t(t):
+            return np.matmul(contactMatrix(t*Tc),np.diag(1/Ni))
+
+
+        Tc = T/2 #rescaling of time, and tsi 
+        #first step is to rescale beta to a value consistent with the given Td
+        Cij = contactMatrix(0)
+        A = np.matmul(np.diag(Ni),Cij)
+        A = np.matmul(A,np.diag(1/Ni))
+        max_eig_A = np.max(np.real(np.linalg.eigvals(A)))
+        sp = np.linspace(0,T,1000)
+        lam = np.log(2)/Td;  #Growth rate
+        rs = max_eig_A*np.trapz(np.exp(-lam*sp)*np.interp(sp,tsi,beta),sp)
+        beta = beta/rs       #now beta has been rescaled to give the correct (dimensional) doubling time
+   
+        #nondimensionalize beta:
+        beta = beta*Tc
+        tsi = tsi/Tc - 1
+        
+        #rescale phi_alpha based on re-scaling of tsi:
+        tsi_sc = tsi_sc/Tc - 1
+        tsiQ = tsiQ/Tc - 1
+        
+        #rescale end time
+        Tf = Tf/Tc
+        TQ = TQ/Tc
+
+        #rescale phi_alpha
+        phi_alpha = phi_alpha*Tc
+        phiQA = phiQA*Tc
+
+        S_0, I_0, Ic_0 = self.IC
+
+        #scalings are done.  Begin setup.
+        #set up the discretization in s
+        s = np.linspace(-1,1,Nk)
+        h = 2/(Nk - 1)
+    
+        #find the timesteps
+        nt = int(np.round(Tf/h)) + 1
+        t = h*np.linspace(0,nt-1,nt)
+        
+        #weighted betas for numerical integration
+        beta_n = h*np.interp(s,tsi,beta)
+        beta_n[[0, Nk-1]] = beta_n[[0, Nk-1]]/2
+    
+        #weighted phi_alpha for numerical integration
+        phi_alpha_n = np.zeros((Nc, Nk))
+        for i in range(Nc):      
+            phi_alpha_n[i,:] = h*np.interp(s,tsi_sc,phi_alpha[i,:])
+            phi_alpha_n[i,[0,Nk-1]] = phi_alpha_n[i,[0,Nk-1]]/2
+    
+        #weights for generic trapezoid integration
+        w = h*np.ones(Nk)
+        w[[0, Nk-1]] = w[[0, Nk-1]]/2
+        
+        #initialize variables
+        S = S_0 + 0
+        I = I_0 + 0
+        Ic = Ic_0 + 0
+            
+        #initialize output vectors:
+        S_t = np.zeros((M, nt))
+        I_t = np.zeros((M, nt))
+        Ic_t = np.zeros((Nc,M,nt))
+        
+        #set their starting values:
+        S_t[:,0] = S_0    
+        I_t[:,0] = np.matmul(w,I_0)
+        Ic_t[:,:,0] = Ic_0
+
+        #initialize a few variables
+        dIc_dt_e = np.zeros((Nc,M))
+        dIc_dt_i = np.zeros((Nc,M))
+    
+        #Voluntary quarantines
+        Phi_QV_n = h*np.interp(s,tsiQ,PhiQV)
+
+        #Assigned quarantines
+        phi_QA_n = h*np.interp(s,tsiQ,phiQA)   #further processing needed
+        Phi_QA_n = Phi_QA_0
+        
+        #initialize variables/lists
+        IQV = np.matmul(w,np.outer(Phi_QV_n,pQV_t(0))*I_0)
+        IQA = 0
+        IQV_t = np.zeros((M,nt))
+        IQA_t = np.zeros((M,nt))
+        IQV_t[:,0] = IQV
+        IQA_t[:,0] = IQA
+           
+    
+        for i in (1 + np.arange(nt-1)):
+            ######################
+            # explicit time step #
+            ######################
+            
+            IQA = Phi_QA_n*I
+            IQV = np.outer(Phi_QV_n,pQV(t[i-1]))*I
+            IQ = IQA + IQV
+            dSdt_e = -np.matmul(np.matmul(np.diag(S), Cij_t(t[i-1])),np.matmul(beta_n,I-IQ)) + \
+                     -np.matmul(np.matmul(np.diag(S),CijQ_t(t[i-1])),np.matmul(beta_n,  IQ))
+               
+            Sp = S + h*dSdt_e
+            
+            for j in range(Nc):
+                dIc_dt_e[j,:] = np.matmul(phi_alpha_n[j,:],I)*p_alpha[j,:]
+            
+                    
+            #update assigned quarantine profile:
+            dPhi_QA_dt = 1/2*(np.outer(phi_QA_n[1:],      pQA_t(t[i-1])) +\
+                              np.outer(phi_QA_n[:(Nk-1)], pQA_t(t[i-0])))
+            dIQA_dt = 1/2*(np.outer(phi_QA_n[1:],      pQA_t(t[i-1]))*I[1:     ,:] +\
+                           np.outer(phi_QA_n[:(Nk-1)], pQA_t(t[i-0]))*I[:(Nk-1),:])
+            Phi_QA_n[1:,:] = Phi_QA_n[:(Nk-1),:] + h*dPhi_QA_dt
+            
+            #update infected profile
+            I[1:Nk,:] = I[0:(Nk-1),:]
+            I[0,:] = -dSdt_e
+                                                            
+            ##################
+            #'implicit' step #
+            ##################                                                    
+            IQA = Phi_QA_n*I
+            IQV = np.outer(Phi_QV_n,pQV(t[i]))*I
+            IQ = IQA + IQV
+            dSdt_i = -np.matmul(np.matmul(np.diag(Sp), Cij_t(t[i])),np.matmul(beta_n,I-IQ)) + \
+                     -np.matmul(np.matmul(np.diag(Sp),CijQ_t(t[i])),np.matmul(beta_n,  IQ))
+    
+            S = S + h/2*(dSdt_e + dSdt_i)
+            
+            for j in range(Nc):
+                dIc_dt_i[j,:] = np.matmul(phi_alpha_n[j,:],I)*p_alpha[j,:]
+            
+            Ic = Ic + h/2*(dIc_dt_e + dIc_dt_i)
+    
+            I[0,:] = -dSdt_i
+            
+            #remember this timestep    
+            S_t[:,i]     = S    
+            I_t[:,i]     = np.matmul(w,I)
+            Ic_t[:,:, i] = Ic
+            IQV_t[:,i]   = np.matmul(w,IQV)
+            IQA_t[:,i]   = IQA_t[:,i-1] + h*np.sum(dIQA_dt,0)
+        
+
+        #back calculate the population currently under quarantine:
+        tb = t[nt-1]; count = nt-1
+        while (tb - h) > TQ:
+            for i in range(M):
+                IQA_t[i,count] += -np.interp(tb - TQ, t ,IQA_t[i,:])
+            count += - 1
+            tb += -h
+            
+        return t, S_t, I_t, Ic_t, IQV_t, IQA_t                      
+
+
+
 
     def simulate(self, IC, atol=1e-4, rtol=1e-3):
         self.IC = IC
@@ -579,17 +808,21 @@ cdef class Simulator:
         
         method    = self.method
         galerkinIntegrator= self.galerkinIntegrator
-        phi_alpha = self.phi_alpha
-        p_alpha   = self.p_alpha                  
+        phi_alpha = self.parameters['phi_alpha']
+        p_alpha   = self.parameters['p_alpha']                 
         
         contactMatrix = self.parameters['contactMatrix']
+
+        if 'TQ' in self.parameters:
+            t, S_t, I_t, Ic_t, IQV_t, IQA_t = self.solve_Predictor_CorrectorQ()
+            data = {'t':t*T/2, 'S_t':S_t, 'I_t':I_t, 'Ic_t':Ic_t, 'IQV_t':IQV_t, 'IQA_t':IQA_t}
+            return data
         
         if method == 'Predictor_Corrector':
-            t, S_t, I_t, Ic_t = self.solve_Predictor_Corrector(atol, rtol)
+            t, S_t, I_t, Ic_t = self.solve_Predictor_Corrector()
 
         elif method == 'Galerkin':
-            tc=0
-            t, S_t, I_t, Ic_t = self.solve_Galerkin(atol, rtol, tc, False)
+            t, S_t, I_t, Ic_t = self.solve_Galerkin(atol, rtol)
         
         elif method == 'Hybrid':
             tc = 0
@@ -629,5 +862,5 @@ cdef class Simulator:
                 tc = tc + tstep
                 #print(IC_t)
 
-        data = {'t':t, 'S_t':S_t, 'I_t':I_t, 'Ic_t':Ic_t}
+        data = {'t':t*T/2, 'S_t':S_t, 'I_t':I_t, 'Ic_t':Ic_t}
         return data    
