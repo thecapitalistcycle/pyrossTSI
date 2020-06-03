@@ -151,6 +151,7 @@ cdef class Simulator:
         
         #rescale end time
         Tf = Tf/Tc
+        tstart = tstart/Tc
 
         #rescale phi_alpha
         phi_alpha = phi_alpha*Tc
@@ -293,6 +294,7 @@ cdef class Simulator:
         
         #rescale end time
         Tf = Tf/Tc
+        tstart = tstart/Tc
 
         #rescale phi_alpha
         phi_alpha = phi_alpha*Tc
@@ -799,7 +801,8 @@ cdef class Simulator:
         T  = self.parameters['T']                   
         Nc = self.parameters['Nc']                   
         Nk = self.parameters['Nk']                   
-        Tf = self.parameters['Tf']                   
+        Tf = self.parameters['Tf']
+        Tc = T/2                   
         
         tsi       = self.parameters['tsi']
         beta      = self.parameters['beta']                  
@@ -836,9 +839,9 @@ cdef class Simulator:
                     self.parameters['Tf'] = tstep
                     sol = self.solve_Galerkin(atol, rtol, tc, True)
                 else:
-                    tstep = 2
+                    tstep = T
                     self.parameters['Tf'] = tstep
-                    sol = self.solve_Predictor_Corrector(atol, rtol, tc, True)
+                    sol = self.solve_Predictor_Corrector(tc, True)
                     if count < len(tswap)-1:
                         count += 1
                 
@@ -846,7 +849,7 @@ cdef class Simulator:
                 if count == 0 or (count == 1 and tc == 0):
                     t, S_t, I_t, Ic_t, self.IC = sol
                 else:
-                    t  = np.concatenate((t,tc + sol[0]))
+                    t  = np.concatenate((t,tc/Tc + sol[0]))
                     nt = len(t); S_t_new = np.zeros((M,nt)); I_t_new = np.zeros((M,nt)); Ic_t_new = np.zeros((Nc,M,nt))
                     for i in range(M):
                         S_t_new[i,:] = np.append(S_t[i,:],sol[1][i,:])
