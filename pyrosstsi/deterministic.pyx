@@ -63,7 +63,7 @@ cdef class Simulator:
         rs   = max_eig_A*np.trapz(np.exp(-lam*sp)*np.interp(sp,tsi,beta),sp)
         beta = beta/rs       #now beta has been rescaled to give the correct (dimensional) doubling time
         
-        ep = 0.001/T*Np
+        ep = 0.001/T*Np/M
         
         #Initial susceptible is the whole population
         S_0 = Ni
