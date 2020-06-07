@@ -1,0 +1,324 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Deterministic simulations &mdash; PyRossTSI 1.0.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Contact matrix class" href="contact_matrix.html" />
+    <link rel="prev" title="PyRossTSI API" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> PyRossTSI
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Deterministic simulations</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#simulator">Simulator</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="contact_matrix.html">Contact matrix class</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PyRossTSI</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Deterministic simulations</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/deterministic.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="deterministic-simulations">
+<h1>Deterministic simulations<a class="headerlink" href="#deterministic-simulations" title="Permalink to this headline">¶</a></h1>
+<p>Deterministic time since infection simulations</p>
+<div class="section" id="simulator">
+<h2>Simulator<a class="headerlink" href="#simulator" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="pyrosstsi.deterministic.Simulator">
+<em class="property">class </em><code class="sig-prename descclassname">pyrosstsi.deterministic.</code><code class="sig-name descname">Simulator</code><a class="headerlink" href="#pyrosstsi.deterministic.Simulator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simulator for a deterministic time-since infection model</p>
+<dl class="py method">
+<dt>
+<code class="sig-name descname">solve_Predictor_Corrector:</code></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt>
+<code class="sig-name descname">solve_Galerkin:</code></dt>
+<dd></dd></dl>
+
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pyrosstsi</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">T</span> <span class="o">=</span> <span class="mi">15</span>                                       <span class="c1"># Longest  infectious duration</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Td</span> <span class="o">=</span> <span class="mi">5</span>                                       <span class="c1"># Doubling time in linear growth regime</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Tf</span> <span class="o">=</span> <span class="mi">150</span>                                     <span class="c1"># Duration of simulation</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tsi</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span>   <span class="mi">3</span><span class="p">,</span>    <span class="mi">5</span><span class="p">,</span>   <span class="mi">10</span><span class="p">,</span>   <span class="n">T</span><span class="p">])</span>   <span class="c1"># Time since infection (days)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span>   <span class="mf">0.5</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span>   <span class="o">.</span><span class="mi">5</span><span class="p">,</span>   <span class="mi">0</span><span class="p">])</span>   <span class="c1"># Mean infectiousness</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">M</span> <span class="o">=</span> <span class="mi">2</span>                                        <span class="c1"># Number of age groups to model</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Ni</span> <span class="o">=</span> <span class="mi">10</span><span class="o">**</span><span class="mi">6</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">M</span><span class="p">)</span>                        <span class="c1"># Number of people in each age group</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Np</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">Ni</span><span class="p">)</span>                                 <span class="c1"># Total population size</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1">#how many &#39;stages&#39; to resolve in time since infection?</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Nk</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1">#define a time-dependent contact matrix.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1">#variations on timescale less than T/Nk may not be resolved.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">contactMatrix</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">if</span> <span class="n">t</span> <span class="o">&gt;</span> <span class="mi">15</span> <span class="ow">and</span> <span class="n">t</span> <span class="o">&lt;</span> <span class="mi">100</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="k">return</span> <span class="mi">1</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]])</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">else</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]]);</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">subclasses</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Recovered&#39;</span><span class="p">,</span> <span class="s1">&#39;Hospitalized&#39;</span><span class="p">,</span> <span class="s1">&#39;Mortality&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pR</span> <span class="o">=</span> <span class="mf">0.99</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">M</span><span class="p">);</span>  <span class="c1">#probability of eventually recovering for each age class</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pH</span> <span class="o">=</span> <span class="mf">0.05</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">M</span><span class="p">);</span>  <span class="c1">#probability of needing hospitalization for each age class</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pD</span> <span class="o">=</span> <span class="mi">1</span><span class="o">-</span><span class="n">pR</span><span class="p">;</span>             <span class="c1">#probability of death for each age class</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1">#prepare for a linear interpolating function evaluated at times:</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tsi_sc</span>  <span class="o">=</span>  <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span>   <span class="mf">3.</span><span class="p">,</span>    <span class="mf">6.</span><span class="p">,</span>    <span class="mf">9.</span><span class="p">,</span>   <span class="mi">12</span><span class="p">,</span>    <span class="n">T</span><span class="p">])</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">phiR</span>     <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span>    <span class="mi">0</span><span class="p">,</span>    <span class="mf">0.5</span><span class="p">,</span>   <span class="mi">3</span><span class="p">,</span>     <span class="mi">2</span><span class="p">,</span>     <span class="mi">0</span><span class="p">])</span><span class="c1">#rate of transferring to &#39;recovered&#39; (arbitrary units)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">phiH_in</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span>    <span class="mi">0</span><span class="p">,</span>    <span class="mi">1</span><span class="p">,</span>     <span class="mi">1</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">])</span><span class="c1">#rate that people enter hospital     (arbitrary units)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">phiH_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span>    <span class="mi">0</span><span class="p">,</span>    <span class="mi">0</span><span class="p">,</span>     <span class="mi">1</span><span class="p">,</span>     <span class="mi">1</span><span class="p">,</span>     <span class="mi">0</span><span class="p">])</span><span class="c1">#rate that people exit  hospital     (arbitrary units)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">phiD</span>     <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span>    <span class="mi">0</span><span class="p">,</span>    <span class="mi">0</span><span class="p">,</span>     <span class="mi">1</span><span class="p">,</span>     <span class="mi">1</span><span class="p">,</span>    <span class="o">.</span><span class="mi">5</span><span class="p">])</span><span class="c1">#times at which a person dies        (arbitrary units)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1">#combine hospital in/out to a single function for net change in hospitalized cases</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">phiH</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="o">-</span><span class="n">phiH_out</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">phiH_out</span><span class="p">,</span><span class="n">tsi_sc</span><span class="p">),</span><span class="n">phiH_in</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">phiH_in</span><span class="p">,</span><span class="n">tsi_sc</span><span class="p">))</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1">#normalize all to one -- can then be rescaled by approprate pR, pH, pD, etc. at a later time</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">phiR</span><span class="p">,</span>  <span class="n">phiD</span>  <span class="o">=</span> <span class="n">phiR</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">phiR</span><span class="p">,</span><span class="n">tsi_sc</span><span class="p">),</span>  <span class="n">phiD</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">phiD</span><span class="p">,</span><span class="n">tsi_sc</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1">#group them all together for later processing</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">phi_alpha</span><span class="p">,</span> <span class="n">p_alpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">phiR</span><span class="p">,</span> <span class="n">phiH</span><span class="p">,</span> <span class="n">phiD</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">pR</span><span class="p">,</span> <span class="n">pH</span><span class="p">,</span> <span class="n">pD</span><span class="p">])</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">parameters</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;M&#39;</span><span class="p">:</span><span class="n">M</span><span class="p">,</span> <span class="s1">&#39;Ni&#39;</span><span class="p">:</span><span class="n">Ni</span><span class="p">,</span> <span class="s1">&#39;Nc&#39;</span><span class="p">:</span><span class="nb">len</span><span class="p">(</span><span class="n">subclasses</span><span class="p">),</span> <span class="s1">&#39;Nk&#39;</span><span class="p">:</span><span class="n">Nk</span><span class="p">,</span> <span class="s1">&#39;Tf&#39;</span><span class="p">:</span><span class="n">Tf</span><span class="p">,</span> <span class="s1">&#39;Tc&#39;</span><span class="p">:(</span><span class="n">T</span><span class="o">/</span><span class="mi">2</span><span class="p">),</span> <span class="s1">&#39;T&#39;</span><span class="p">:</span><span class="n">T</span><span class="p">,</span> <span class="s1">&#39;Td&#39;</span><span class="p">:</span><span class="n">Td</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>              <span class="s1">&#39;tsi&#39;</span><span class="p">:</span><span class="n">tsi</span><span class="p">,</span><span class="s1">&#39;beta&#39;</span><span class="p">:</span><span class="n">beta</span><span class="p">,</span><span class="s1">&#39;tsi_sc&#39;</span><span class="p">:</span><span class="n">tsi_sc</span><span class="p">,</span> <span class="s1">&#39;phi_alpha&#39;</span><span class="p">:</span><span class="n">phi_alpha</span><span class="p">,</span> <span class="s1">&#39;p_alpha&#39;</span><span class="p">:</span><span class="n">p_alpha</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>              <span class="s1">&#39;contactMatrix&#39;</span><span class="p">:</span><span class="n">contactMatrix</span><span class="p">}</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">pyrosstsi</span><span class="o">.</span><span class="n">deterministic</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">IC</span>    <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_IC</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span>  <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">simulate</span><span class="p">(</span><span class="n">IC</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt id="pyrosstsi.deterministic.Simulator.solve_Galerkin">
+<code class="sig-name descname">solve_Galerkin</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyrosstsi.deterministic.Simulator.solve_Galerkin" title="Permalink to this definition">¶</a></dt>
+<dd><dl>
+<dt>The Galerkin method is defined in the TSI report, section 2.6</dt><dd><p>It spectral accuracy in s and allows for adatptive timestepping in t
+For constant contact matrix, use ‘odeint’, otherise use ‘Crank Nicolson’</p>
+<blockquote>
+<div><p>-Notable advantage over predictor/corrector is flexibility in time-stepping
+-Notable disadvantages include:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>ill-suited to non-smooth dynamics (like most spectral methods)</p></li>
+<li><p>must be solved as DAE when contact matrix is time-dependent (slow)</p></li>
+</ol>
+</div></blockquote>
+</div></blockquote>
+</dd>
+</dl>
+<p>For most practical purposes, we regard predictor/corrector as the preferred choice.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pyrosstsi.deterministic.Simulator.solve_Predictor_Corrector">
+<code class="sig-name descname">solve_Predictor_Corrector</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyrosstsi.deterministic.Simulator.solve_Predictor_Corrector" title="Permalink to this definition">¶</a></dt>
+<dd><p>Predictor/Corrector is a finite difference method described in the TSI report, section 2.5
+It has good properties for speed and accuracy and should be preferred in most applications
+Notable disadvantage is a lack of flexibility in time-stepping – you must increment by
+the same time step every time.  Function evaluations at intermediate times can be found by
+interpolation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pyrosstsi.deterministic.Simulator.solve_Predictor_CorrectorQ">
+<code class="sig-name descname">solve_Predictor_CorrectorQ</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyrosstsi.deterministic.Simulator.solve_Predictor_CorrectorQ" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is a predictor corrector method specifically for epidemics with two quarantine classes:
+(1) Voluntary quarantines – people move in and out based on the current advice/symptoms, no concern for history
+(2) Assigned quarantines – whether a person is quarantined or not depends on testing capabilities in the past
+Voluntary quarantines are all assumed to end before time T, whereas assigned quarantines are assumed to all last
+beyond time T.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="contact_matrix.html" class="btn btn-neutral float-right" title="Contact matrix class" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral float-left" title="PyRossTSI API" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Ronojoy Adhikari, Austen Bolitho, Fernando Caballero, Michael Cates, Jakub Dolezal, Timothy Ekeh, Jules Guioth, Robert Jack, Julian Kappler, Lukas Kikuchi, Irene Li, Joseph Peterson, Patrick Pietzonka, Benjamin Remez, Paul Rohrbach, Rajesh Singh, and Günther Turk
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

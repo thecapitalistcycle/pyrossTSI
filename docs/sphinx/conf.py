@@ -15,7 +15,7 @@ import sys
 
 # -- Project information -----------------------------------------------------
 
-project = 'PyRoss'
+project = 'PyRossTSI'
 copyright = '2020, Ronojoy Adhikari, Austen Bolitho, Fernando Caballero, Michael Cates, Jakub Dolezal, Timothy Ekeh, Jules Guioth, Robert Jack, Julian Kappler, Lukas Kikuchi, Irene Li, Joseph Peterson, Patrick Pietzonka, Benjamin Remez, Paul Rohrbach, Rajesh Singh, and Günther Turk'
 author = 'Ronojoy Adhikari, Austen Bolitho, Fernando Caballero, Michael Cates, Jakub Dolezal, Timothy Ekeh, Jules Guioth, Robert Jack, Julian Kappler, Lukas Kikuchi, Irene Li, Joseph Peterson, Patrick Pietzonka, Benjamin Remez, Paul Rohrbach, Rajesh Singh, and Günther Turk'
 
