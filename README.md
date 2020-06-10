@@ -3,7 +3,7 @@
 [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/rajeshrinet/pyrosstsi/master?filepath=examples) 
 [![Documentation Status](https://readthedocs.org/projects/pyrosstsi/badge/?version=latest)](https://pyrosstsi.readthedocs.io/en/latest/?badge=latest)
 ![Installation](https://github.com/rajeshrinet/pyrosstsi/workflows/Installation/badge.svg) 
-[![PyPI version](https://badge.fury.io/py/pyrosstsi.svg)](https://badge.fury.io/py/pyross)
+[![PyPI version](https://badge.fury.io/py/pyrosstsi.svg)](https://badge.fury.io/py/pyrosstsi)
 ![License](https://img.shields.io/github/license/rajeshrinet/pyrosstsi) 
 ![stars](https://img.shields.io/github/stars/rajeshrinet/pyrosstsi) 
 ![forks](https://img.shields.io/github/forks/rajeshrinet/pyrosstsi) 
