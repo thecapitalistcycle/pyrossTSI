@@ -9,7 +9,7 @@
  
 
 ## About
-PyRossTSI is for modelling infectiousness of an infected individual as a function of time since infection. 
+PyRossTSI is for modelling infectiousness of an infected individual as a function of time since infection. Companion libraries are listed below:
 
 * [PyRoss](https://github.com/rajeshrinet/pyross) is a companion library that offers tools for both deterministic and stochastic simulation of macroscopic compartmental models, as well as a complete
 suite of inference and optimal control tools.
