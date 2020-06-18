@@ -1,6 +1,7 @@
 # PyRossTSI: Time since infection models in Python  [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/rajeshrinet/pyrosstsi/master?filepath=examples)
 
 ![Installation](https://github.com/rajeshrinet/pyrosstsi/workflows/Installation/badge.svg) 
+![Notebooks](https://github.com/rajeshrinet/pyrosstsi/workflows/Notebooks/badge.svg)
 [![Documentation Status](https://readthedocs.org/projects/pyrosstsi/badge/?version=latest)](https://pyrosstsi.readthedocs.io/en/latest/?badge=latest)
 [![PyPI version](https://badge.fury.io/py/pyrosstsi.svg)](https://badge.fury.io/py/pyrosstsi) 
 [![Downloads](https://pepy.tech/badge/pyrosstsi)](https://pepy.tech/project/pyrosstsi)
@@ -20,7 +21,9 @@ suite of inference and optimal control tools.
 
 
 ## Installation
-You can take PyRossTSI for a spin **without installation**: [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/rajeshrinet/pyrosstsi/master?filepath=examples). Please be patient while [Binder](https://mybinder.org/v2/gh/rajeshrinet/pyrosstsi/master?filepath=examples) loads.
+You can take PyRossTSI for a spin **without installation**: 
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/rajeshrinet/pyrosstsi/master?filepath=examples). 
+Please be patient while [Binder](https://mybinder.org/v2/gh/rajeshrinet/pyrosstsi/master?filepath=examples) loads.
 
 PyRossTSI requires the following software
 
@@ -46,7 +49,7 @@ Alternatively, use [anaconda](https://docs.conda.io/projects/continuumio-conda/e
 >> make
 ```
 #### Pip
-
+Install latest PyPI version
 ```
-pip install -e git+https://github.com/rajeshrinet/pyrosstsi.git#egg=pyrosstsi
+pip install pyrosstsi
 ```

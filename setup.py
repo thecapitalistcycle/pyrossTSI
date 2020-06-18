@@ -1,4 +1,5 @@
 import numpy
+import setuptools
 import os, sys
 from distutils.core import setup
 from Cython.Build import cythonize
@@ -20,8 +21,8 @@ else:
 
 
 setup(
-    name='PyRossTSI',
-    version='1.0.0',
+    name='pyrosstsi',
+    version='1.0.1',
     url='https://github.com/rajeshrinet/pyrosstsi',
     author='The PyRossTSI team',
     license='MIT',
@@ -33,5 +34,6 @@ setup(
         ),
     libraries=[],
     packages=['pyrosstsi'],
+    install_requires=["cython","numpy","scipy","nlopt"],
     package_data={'pyrosstsi': ['*.pxd']},
 )

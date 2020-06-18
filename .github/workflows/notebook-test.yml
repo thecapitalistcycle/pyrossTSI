@@ -1,0 +1,32 @@
+name: Notebooks
+
+on: push
+#on:
+#    schedule:
+#      # 4am daily
+#      - cron:  '0 1 * * *'
+
+jobs:
+
+  build-and-test:
+    name: notebooks
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Miniconda
+        uses: goanpeca/setup-miniconda@v1.2.0
+        with:
+         activate-environment: pyrosstsi
+         environment-file: environment.yml
+         # auto-activate-base: true
+      - name: make-pyrosstsi
+        shell: bash -l {0}
+        run: |
+          conda activate pyrosstsi
+          make
+      - name: testing-notebooks
+        shell: bash -l {0}
+        run: |
+          make nbtest 
