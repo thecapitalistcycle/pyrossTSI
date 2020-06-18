@@ -22,63 +22,6 @@ cdef class Simulator:
     solve_Predictor_Corrector: 
 
     solve_Galerkin: 
-
-    Example
-    -------
-    >>> import pyrosstsi
-    >>> import numpy as np
-    >>> import matplotlib.pyplot as plt
-    >>> T = 15                                       # Longest  infectious duration
-    >>> Td = 5                                       # Doubling time in linear growth regime
-    >>> Tf = 150                                     # Duration of simulation
-    >>> 
-    >>> tsi  = np.array([0,   3,    5,   10,   T])   # Time since infection (days)
-    >>> beta = np.array([0,   0.5,  1,   .5,   0])   # Mean infectiousness 
-    >>> 
-    >>> M = 2                                        # Number of age groups to model
-    >>> Ni = 10**6*np.ones(M)                        # Number of people in each age group
-    >>> Np = sum(Ni)                                 # Total population size
-    >>> 
-    >>> #how many 'stages' to resolve in time since infection?
-    >>> Nk = 10
-    >>> 
-    >>> #define a time-dependent contact matrix.
-    >>> #variations on timescale less than T/Nk may not be resolved.
-    >>> def contactMatrix(t):
-    >>>     if t > 15 and t < 100:
-    >>>         return 1*np.array([[4, 1],[1, 2]])
-    >>>     else:
-    >>>         return np.array([[4, 1],[1, 2]]); 
-    >>> 
-    >>> subclasses = ['Recovered', 'Hospitalized', 'Mortality']  
-    >>> pR = 0.99*np.ones(M);  #probability of eventually recovering for each age class
-    >>> pH = 0.05*np.ones(M);  #probability of needing hospitalization for each age class
-    >>> pD = 1-pR;             #probability of death for each age class
-    >>> 
-    >>> #prepare for a linear interpolating function evaluated at times:
-    >>> tsi_sc  =  np.array([0,   3.,    6.,    9.,   12,    T])   
-    >>> 
-    >>> phiR     = np.array([0,    0,    0.5,   3,     2,     0])#rate of transferring to 'recovered' (arbitrary units)
-    >>> phiH_in  = np.array([0,    0,    1,     1,     0,     0])#rate that people enter hospital     (arbitrary units)
-    >>> phiH_out = np.array([0,    0,    0,     1,     1,     0])#rate that people exit  hospital     (arbitrary units)
-    >>> phiD     = np.array([0,    0,    0,     1,     1,    .5])#times at which a person dies        (arbitrary units)
-    >>> 
-    >>> #combine hospital in/out to a single function for net change in hospitalized cases
-    >>> phiH = np.add(-phiH_out/np.trapz(phiH_out,tsi_sc),phiH_in/np.trapz(phiH_in,tsi_sc))
-    >>> 
-    >>> #normalize all to one -- can then be rescaled by approprate pR, pH, pD, etc. at a later time
-    >>> phiR,  phiD  = phiR/np.trapz(phiR,tsi_sc),  phiD/np.trapz(phiD,tsi_sc)
-    >>> 
-    >>> #group them all together for later processing
-    >>> phi_alpha, p_alpha = np.array([phiR, phiH, phiD]), np.array([pR, pH, pD])
-    >>> 
-    >>> parameters = {'M':M, 'Ni':Ni, 'Nc':len(subclasses), 'Nk':Nk, 'Tf':Tf, 'Tc':(T/2), 'T':T, 'Td':Td,
-    >>>               'tsi':tsi,'beta':beta,'tsi_sc':tsi_sc, 'phi_alpha':phi_alpha, 'p_alpha':p_alpha,
-    >>>               'contactMatrix':contactMatrix}
-    >>> 
-    >>> model = pyrosstsi.deterministic.Simulator(parameters)
-    >>> IC    = model.get_IC()
-    >>> data  = model.simulate(IC)
     """
 
 
@@ -113,14 +56,20 @@ cdef class Simulator:
         Tc   = parameters['Tc']
         tsi  = parameters['tsi']
         beta = parameters['beta']
+
+        if M == 1:
+            S_0 = np.array([1])
+            I_0 = .001*np.interp(np.linspace(0, 2 ,Nk),tsi, 2**(tsi/Td))
+            Ic_0 = np.zeros((Nc,M))
+            IC = [S_0, I_0, Ic_0]
+            return IC
+
         A = np.matmul(np.diag(Ni),Cij);  
         A = np.matmul(A,np.diag(1/Ni)); 
         max_eig_A = np.max(np.real(np.linalg.eigvals(A)))
         sp   = np.linspace(0,T,1000); lam = np.log(2)/Td;  #Growth rate
         rs   = max_eig_A*np.trapz(np.exp(-lam*sp)*np.interp(sp,tsi,beta),sp)
         beta = beta/rs       #now beta has been rescaled to give the correct (dimensional) doubling time
-        
-        ep = 0.001/T*Np/M
         
         #Initial susceptible is the whole population
         S_0 = Ni
@@ -133,13 +82,15 @@ cdef class Simulator:
         lam = np.log(2)/Td;
         A = A*np.trapz(np.exp(-lam*sp)*np.interp(sp,tsi,beta),sp)
         w, v = np.linalg.eig(-np.identity(M) + A)
-    
+
+        ep = 0.001/T*Np/M
+
         #now identify the largest eigenvalue/eigenvector...
         pos = np.where(w == np.amax(w))
         pos = pos[0][0]
         lam = T/Td*np.log(2)
         s = np.linspace(-1,1,Nk)
-        I_0 = ep*np.abs(np.real(np.outer(np.exp(-lam*s),v[:,pos])))
+        I_0 = ep*np.abs(np.real(np.outer(np.exp(-lam*(s+1)),v[:,pos])))
  
         #just set Ic_0 to zero -- these numbers are too small to matter
         Ic_0 = np.zeros((Nc,M))
@@ -191,14 +142,17 @@ cdef class Simulator:
         Tc = T/2 #rescaling of time, and tsi 
         #first step is to rescale beta to a value consistent with the given Td
         Cij = contactMatrix(0)
-        A = np.matmul(np.diag(Ni),Cij)
-        A = np.matmul(A,np.diag(1/Ni))
+        if M > 1:
+            A = np.matmul(np.diag(Ni),Cij)
+            A = np.matmul(A,np.diag(1/Ni))
+        else:
+            A = Cij
         max_eig_A = np.max(np.real(np.linalg.eigvals(A)))
         sp = np.linspace(0,T,1000)
         lam = np.log(2)/Td;  #Growth rate
         rs = max_eig_A*np.trapz(np.exp(-lam*sp)*np.interp(sp,tsi,beta),sp)
         beta = beta/rs       #now beta has been rescaled to give the correct (dimensional) doubling time
-   
+
         #nondimensionalize beta:
         beta = beta*Tc
         tsi = tsi/Tc - 1
@@ -211,7 +165,8 @@ cdef class Simulator:
         tstart = tstart/Tc
 
         #rescale phi_alpha
-        phi_alpha = phi_alpha*Tc
+        if Nc > 0:
+            phi_alpha = phi_alpha*Tc
 
         S_0, I_0, Ic_0 = self.IC 
    
@@ -223,7 +178,7 @@ cdef class Simulator:
         #find the timesteps
         nt = int(np.round(Tf/h)) + 1
         t = h*np.linspace(0,nt-1,nt)
-    
+
         #weighted betas for numerical integration
         beta_n = h*np.interp(s,tsi,beta)
         beta_n[[0, Nk-1]] = beta_n[[0, Nk-1]]/2
@@ -256,23 +211,23 @@ cdef class Simulator:
         #initialize a few variables
         dIc_dt_e = np.zeros((Nc,M))
         dIc_dt_i = np.zeros((Nc,M))
-    
+
         for i in (1 + np.arange(nt-1)):
     
             #explicit time step
             dSdt_e = -np.matmul(np.matmul(np.diag(S),Cij_t(tstart + t[i-1])),np.matmul(beta_n,I))
             Sp = S + h*dSdt_e
-    
+
             for j in range(Nc):
                 dIc_dt_e[j,:] = np.matmul(phi_alpha_n[j,:],I)*p_alpha[j,:]
-    
+
             I[1:Nk,:] = I[0:(Nk-1),:]
             I[0,:] = -dSdt_e
-    
+
             #'implicit' step
             dSdt_i = -np.matmul(np.matmul(np.diag(Sp),Cij_t(tstart + t[i])),np.matmul(beta_n,I))
             S = S + h/2*(dSdt_e + dSdt_i)
-    
+
             for j in range(Nc):
                 dIc_dt_i[j,:] = np.matmul(phi_alpha_n[j,:],I)*p_alpha[j,:]
     
@@ -334,8 +289,11 @@ cdef class Simulator:
         Tc = T/2 #rescaling of time, and tsi 
         #first step is to rescale beta to a value consistent with the given Td
         Cij = contactMatrix(0)
-        A = np.matmul(np.diag(Ni),Cij)
-        A = np.matmul(A,np.diag(1/Ni))
+        if M > 1:
+            A = np.matmul(np.diag(Ni),Cij)
+            A = np.matmul(A,np.diag(1/Ni))
+        else:
+            A = Cij
         max_eig_A = np.max(np.real(np.linalg.eigvals(A)))
         sp = np.linspace(0,T,1000)
         lam = np.log(2)/Td;  #Growth rate
@@ -354,7 +312,8 @@ cdef class Simulator:
         tstart = tstart/Tc
 
         #rescale phi_alpha
-        phi_alpha = phi_alpha*Tc
+        if Nc > 0:
+            phi_alpha = phi_alpha*Tc
 
 
         galerkinIntegrator  = self.galerkinIntegrator
@@ -701,8 +660,11 @@ cdef class Simulator:
         Tc = T/2 #rescaling of time, and tsi 
         #first step is to rescale beta to a value consistent with the given Td
         Cij = contactMatrix(0)
-        A = np.matmul(np.diag(Ni),Cij)
-        A = np.matmul(A,np.diag(1/Ni))
+        if M > 1:
+            A = np.matmul(np.diag(Ni),Cij)
+            A = np.matmul(A,np.diag(1/Ni))
+        else:
+            A = Cij
         max_eig_A = np.max(np.real(np.linalg.eigvals(A)))
         sp = np.linspace(0,T,1000)
         lam = np.log(2)/Td;  #Growth rate
@@ -722,7 +684,8 @@ cdef class Simulator:
         TQ = TQ/Tc
 
         #rescale phi_alpha
-        phi_alpha = phi_alpha*Tc
+        if Nc > 0:
+            phi_alpha = phi_alpha*Tc
         phiQA = phiQA*Tc
 
         S_0, I_0, Ic_0 = self.IC
