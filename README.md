@@ -3,17 +3,13 @@
 ![Installation](https://github.com/rajeshrinet/pyrosstsi/workflows/Installation/badge.svg) 
 ![Notebooks](https://github.com/rajeshrinet/pyrosstsi/workflows/Notebooks/badge.svg)
 [![Documentation Status](https://readthedocs.org/projects/pyrosstsi/badge/?version=latest)](https://pyrosstsi.readthedocs.io/en/latest/?badge=latest)
-[![PyPI version](https://badge.fury.io/py/pyrosstsi.svg)](https://badge.fury.io/py/pyrosstsi) 
 [![Downloads](https://pepy.tech/badge/pyrosstsi)](https://pepy.tech/project/pyrosstsi)
 ![stars](https://img.shields.io/github/stars/rajeshrinet/pyrosstsi) 
 ![forks](https://img.shields.io/github/forks/rajeshrinet/pyrosstsi) 
  
 
-
-
-
 ## About
-
+PyRossTSI is for modelling infectiousness of an infected individual as a function of time since infection. 
 
 * [PyRoss](https://github.com/rajeshrinet/pyross) is a companion library that offers tools for both deterministic and stochastic simulation of macroscopic compartmental models, as well as a complete
 suite of inference and optimal control tools.
