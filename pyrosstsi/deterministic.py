@@ -1,7 +1,4 @@
 import  numpy as np
-cimport numpy as np
-cimport cython
-from libc.stdlib cimport malloc, free
 import warnings
 from scipy.special import legendre
 import matplotlib.pyplot as plt
@@ -13,7 +10,7 @@ DTYPE   = np.float
 
 
 
-cdef class Simulator:
+class Simulator:
     """
     Simulator for a deterministic time-since infection model
 
@@ -81,13 +78,6 @@ cdef class Simulator:
     >>> data  = model.simulate(IC)
     """
 
-
-    cdef:
-        readonly dict parameters
-        readonly str method
-        readonly str galerkinIntegrator 
-        readonly list IC 
-        readonly np.ndarray phi_alpha, p_alpha
 
     def __init__(self, parameters, method='Predictor_Corrector', galerkinIntegrator='odeint'):
         self.parameters         = parameters

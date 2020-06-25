@@ -1,166 +1,64 @@
 import  numpy as np
-cimport numpy as np
 import scipy.linalg as spl
-cimport cython
 import warnings
 from types import ModuleType
 import os 
-
-
-
 DTYPE   = np.float
-ctypedef np.float_t DTYPE_t
-@cython.wraparound(False)
-@cython.boundscheck(False)
-@cython.cdivision(True)
-@cython.nonecheck(False)
-cdef class ContactMatrixFunction:
+
+
+
+def getCM(country='India', sheet=1):
     """
-    Computed a time dependent function of the contact matrix 
+    Method to compute contact matrices of a given country
+    
+    The data is read from sheets at: 
 
-    Takes as input 
-    CH:  constant matrix at home
-    CW:  constant matrix at work
-    CS:  constant matrix at school
-    CO:  constant matrix at other locations
+    https://github.com/rajeshrinet/pyross/tree/master/examples/data/contact_matrices_152_countries
 
+    Parameters
+    ----------
+    country: string 
+        Default is India
+    sheet: int 
+        Default is 1
+        sheet takes value 1 and 2
 
-    Methods
-    -------
-    constant_CM : returns, CH, CW, CS, CO 
+    Returns
+    ----------
+    four np.arrays: CH, CW, CS, CO of the given country 
 
+    CH - home, 
 
-    interventions_temporal: returns the sum of CH, CW, CS, CO 
-                            given times and interventions_temporal
+    CW - work, 
+
+    CS - school, 
+
+    CO - other locations 
+
     """
-    cdef:
-        np.ndarray CH, CW, CS, CO
 
-    def __init__(self, CH, CW, CS, CO):
-        self.CH, self.CW, self.CS, self.CO = CH, CW, CS, CO
+    u1 ='https://raw.githubusercontent.com/rajeshrinet/pyross/master/examples'
+    u2 ='/data/contact_matrices_152_countries/MUestimates_'
 
-    cpdef get_individual_contactMatrices(self):
-        return self.CH, self.CW, self.CS, self.CO
+    if sheet==1:
+        uH = u1 + u2 + 'home_1.xlsx'
+        uW = u1 + u2 + 'work_1.xlsx'
+        uS = u1 + u2 + 'school_1.xlsx'
+        uO = u1 + u2 + 'other_locations_1.xlsx'
+    elif sheet==2:
+        uH = u1 + u2 + 'home_2.xlsx'
+        uW = u1 + u2 + 'work_2.xlsx'
+        uS = u1 + u2 + 'school_2.xlsx'
+        uO = u1 + u2 + 'other_locations_2.xlsx'
+    else:
+        raise Exception('There are only two sheets, choose 1 or 2')
 
-    def constant_contactMatrix(self):
-        cdef:
-            np.ndarray C
-        C = self.CH + self.CW + self.CS + self.CO
-        def C_func(t):
-            return C
-        return C_func
-
-    def constant_CM(self, t):
-        return self.CH + self.CW + self.CS + self.CO
-
-    def interventions_temporal(self,times,interventions):
-        cdef:
-            np.ndarray t_arr = np.array(times)
-            np.ndarray prefac_arr = np.array(interventions)
-            int index
-            np.ndarray C
-            np.ndarray CH = self.CH, CW = self.CW
-            np.ndarray CS = self.CS, CO = self.CO
-        # times: ordered array with temporal boundaries between the
-        #        different interventions
-        # interventions: ordered matrix with prefactors of CW, CS, CO matrices
-        #                during the different time intervals
-        # note that len(interventions) = len(times) + 1
-        def C_func(t):
-            index = np.argmin( t_arr < t)
-            if index == 0:
-                if t >= t_arr[len(t_arr)-1]:
-                    index = -1
-            #print("t = {0},\tprefac_arr = {1}".format(t,prefac_arr[index]))
-            return CH + prefac_arr[index,0]*CW \
-                      + prefac_arr[index,1]*CS \
-                      + prefac_arr[index,2]*CO
-        return C_func
-
-
-    def interventions_threshold(self,thresholds,interventions):
-        cdef:
-            np.ndarray thresholds_ = np.array(thresholds)
-            np.ndarray prefac_arr = np.array(interventions)
-            int index
-            np.ndarray C
-            np.ndarray CH = self.CH, CW = self.CW
-            np.ndarray CS = self.CS, CO = self.CO
-        # thresholds: array of shape [K*M,3] with K*M population numbers (S,Ia,Is)
-        # interventions: array of shape [K+1,3] with prefactors during different
-        #                phases of intervention
-        # The current state of the intervention is defined by the
-        # largest integer "index" such that state[j] >= thresholds[index,j] for all j.
-        #
-        def C_func(t,S,Ia,Is):
-            state = np.concatenate((S, Ia, Is))
-            index = np.argmin((thresholds_ <= state ).all(axis=1))
-            if index == 0:
-                N = len(thresholds_)
-                if (thresholds_[N-1] <= state ).all():
-                    index = N
-            return CH + prefac_arr[index,0]*CW \
-                      + prefac_arr[index,1]*CS \
-                      + prefac_arr[index,2]*CO
-        return C_func
-    
-
-
-
-@cython.wraparound(False)
-@cython.boundscheck(False)
-@cython.cdivision(True)
-@cython.nonecheck(False)
-cdef class SIR(ContactMatrixFunction):
-    
-
-    def basicReproductiveRatio(self, data, state='constant'):
-        C = self.CH + self.CW + self.CS + self.CO
-        # matrix for linearised dynamics
-        alpha = data['alpha']                         # infection rate
-        beta  = data['beta']                         # infection rate
-        gIa   = data['gIa']                          # removal rate of Ia
-        gIs   = data['gIs']                          # removal rate of Is
-        fsa   = data['fsa']                          # the self-isolation parameters
-        M     = data['M']
-        Ni    = data['Ni']
-
-        L0 = np.zeros((M, M))
-        L  = np.zeros((2*M, 2*M))
-        
-        if state=='constant': 
-            for i in range(M):
-                for j in range(M):
-                    L0[i,j]=C[i,j]*Ni[i]/Ni[j]
-
-            L[0:M, 0:M]     = alpha*beta/gIa*L0
-            L[0:M, M:2*M]   = fsa*alpha*beta/gIs*L0
-            L[M:2*M, 0:M]   = ((1-alpha)*beta/gIa)*L0
-            L[M:2*M, M:2*M] = fsa*((1-alpha)*beta/gIs)*L0
-            r0 = np.max(np.linalg.eigvals(L))
-        
-        else: 
-            t = data.get('t');
-            Nt = t.size
-            r0 = np.zeros((Nt))
-
-            for tt in range(Nt): 
-                S = np.array((data['X'][tt,0:M]))
-                for i in range(M):
-                    for j in range(M):
-                        L0[i,j]=C[i,j]*S[i]/Ni[j]
-                
-                L[0:M, 0:M]     = alpha*beta/gIa*L0
-                L[0:M, M:2*M]   = fsa*alpha*beta/gIs*L0
-                L[M:2*M, 0:M]   = ((1-alpha)*beta/gIa)*L0
-                L[M:2*M, M:2*M] = fsa*((1-alpha)*beta/gIs)*L0
-                r0[tt] = np.real(np.max(np.linalg.eigvals(L)))
-
-        return r0
-
-
-
-
+    import pandas as pd
+    CH = np.array(pd.read_excel(uH,  sheet_name=country))
+    CW = np.array(pd.read_excel(uW,  sheet_name=country))
+    CS = np.array(pd.read_excel(uS,  sheet_name=country))
+    CO = np.array(pd.read_excel(uO,  sheet_name=country))
+    return CH, CW, CS, CO
 
 
 
@@ -2680,9 +2578,3 @@ def Cij_dim(t):
     """test method"""
     return np.array([[4, 1],[1, 2]])
 
-
-'''
-used pandas to read the files using
-curDir='/Users/rsingh/Dropbox/repos/github/pyross/examples/'
-np.array(pd.read_excel(os.path.join(curDir,'data/contact_matrices_152_countries/MUestimates_school_1.xlsx'), sheet_name='India'))
-'''

@@ -1,13 +1,6 @@
 import  numpy as np
-cimport numpy as np
-cimport cython
-from libc.math cimport sqrt, pow, log
-from cython.parallel import prange
-cdef double PI = 3.1415926535
 from scipy.sparse import spdiags
 import matplotlib.pyplot as plt
-
-
 
 
 def get_IC(ep, M, Ni, Nc, Nk, Cij, T, Td, tsi, beta):
@@ -186,14 +179,6 @@ def set_destination(term_list, destination_dict):
             product_index = destination_dict[(rate_index, reagent_index)]
             term[2] = product_index
 
-def age_dep_rates(rate, int M, str name):
-    if np.size(rate)==1:
-        return rate*np.ones(M)
-    elif np.size(rate)==M:
-        return rate
-    else:
-        raise Exception('{} can be a number or an array of size M'.format(name))
-
 def make_log_norm_dist(means, stds):
     var = stds**2
     means_sq = means**2
@@ -201,45 +186,6 @@ def make_log_norm_dist(means, stds):
     s = np.sqrt(np.log(1+var/means_sq))
     return s, scale
 
-
-DTYPE = np.float
-
-cpdef forward_euler_integration(f, double [:] x, double t1, double t2, Py_ssize_t steps):
-    cdef:
-        double dt=(t2-t1)/(steps-1),t=t1
-        double [:] fx
-        Py_ssize_t i, j, size=x.shape[0]
-        double [:, :] sol=np.empty((steps, size), dtype=DTYPE)
-
-    for j in range(size):
-        sol[0, j] = x[j]
-    for i in range(1, steps):
-        fx = f(t, x)
-        for j in range(size):
-            sol[i, j] = sol[i-1, j] + fx[j]*dt
-        t += dt
-    return sol
-
-cpdef RK2_integration(f, double [:] x, double t1, double t2, Py_ssize_t steps):
-    cdef:
-        double dt=(t2-t1)/(steps-1),t=t1
-        double [:] fx
-        Py_ssize_t i, j, size=x.shape[0]
-        double [:] k1=np.empty((size), dtype=DTYPE), temp=np.empty((size), dtype=DTYPE)
-        double [:, :] sol=np.empty((steps, size), dtype=DTYPE)
-
-    for j in range(size):
-        sol[0, j] = x[j]
-    for i in range(1, steps):
-        fx = f(t, x)
-        for j in range(size):
-            k1[j] = dt*fx[j]
-            temp[j] = sol[i-1, j] + k1[j]
-        t += dt
-        fx = f(t, temp)
-        for j in range(size):
-            sol[i, j] = sol[i-1, j] + 0.5*(k1[j] + dt*fx[j])
-    return sol
 
 def plotSIR(data, showPlot=True):
     t = data['t']
