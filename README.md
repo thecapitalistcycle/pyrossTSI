@@ -9,7 +9,7 @@
  
 
 ## About
-PyRossTSI is for modelling infectiousness of an infected individual as a function of time since infection. 
+PyRossTSI is for modelling infectiousness of an infected individual as a function of time since infection. Companion libraries are listed below:
 
 * [PyRoss](https://github.com/rajeshrinet/pyross) is a companion library that offers tools for both deterministic and stochastic simulation of macroscopic compartmental models, as well as a complete
 suite of inference and optimal control tools.
@@ -24,8 +24,8 @@ Please be patient while [Binder](https://mybinder.org/v2/gh/rajeshrinet/pyrossts
 PyRossTSI requires the following software
 
 - Python 2.6+ or Python 3.4+
-- [Cython](http://docs.cython.org/en/latest/index.html) |  [Matplotlib](https://matplotlib.org) | [NumPy](http://www.numpy.org) |   [SciPy](https://www.scipy.org/)  | [cma](https://github.com/CMA-ES/pycma) |  [NLopt](https://anaconda.org/conda-forge/nlopt)
-- Optional:  integrators ([OdesPy](https://github.com/rajeshrinet/odespy)) |  parallelizing inference ([pathos](https://anaconda.org/conda-forge/pathos)) |  data files ([Pandas](https://pandas.pydata.org/), [xlrd](https://xlrd.readthedocs.io/en/latest/))
+- [Cython](http://docs.cython.org/en/latest/index.html) |  [Matplotlib](https://matplotlib.org) | [NumPy](http://www.numpy.org) |   [SciPy](https://www.scipy.org/)   |  [NLopt](https://anaconda.org/conda-forge/nlopt)
+- Optional:  integrators ([OdesPy](https://github.com/rajeshrinet/odespy)) |  data files ([Pandas](https://pandas.pydata.org/), [xlrd](https://xlrd.readthedocs.io/en/latest/))
 
 
 Clone (or download) the repository and use a terminal to install PyRoss (above [requirements](https://github.com/rajeshrinet/pyrosstsi/blob/master/requirements.txt) need to be satisfied)
